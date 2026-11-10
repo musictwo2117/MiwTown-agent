@@ -1,3 +1,4 @@
+html,body,button{touch-action:manipulation}   /* a quick second tap must not zoom the page */
 :root{--ink:#4b3442;--soft:#8c6f7f;--glass:rgba(255,255,255,.8);--line:rgba(75,52,66,.10);--bg:#fbe3ea;--accent:#ff7ea6}
 *{box-sizing:border-box}
 html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);font-family:'Nunito',system-ui,sans-serif;color:var(--ink)}
