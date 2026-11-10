@@ -578,6 +578,27 @@ const CAFE = pathPoint(CAFE_TH).add(outward(CAFE_TH).multiplyScalar(-2.7));
   CAFE.group = g;
 }
 
+// the café is the town's famous café once Cheesecake Rush's festival is won (game/story.js writes this key when the ending plays):
+// a golden banner on two poles in front, bunting along the roof and a spinning star on top of the giant cup
+const FAME_KEY = 'miw-cheesecake-rush-famous';
+{
+  let famous = false; try { famous = localStorage.getItem(FAME_KEY) === '1'; } catch {}
+  const f = new THREE.Group();
+  f.position.copy(CAFE.group.position); f.rotation.copy(CAFE.group.rotation); scene.add(f);
+  f.visible = famous;
+  const cv = document.createElement('canvas'); cv.width = 512; cv.height = 128; const x = cv.getContext('2d');
+  x.fillStyle = '#7a4fd6'; x.fillRect(0, 0, 512, 128); x.fillStyle = '#ffd36b'; x.beginPath(); x.roundRect(12, 12, 488, 104, 22); x.fill();
+  x.fillStyle = '#7a4fd6'; x.font = "700 40px 'Fredoka', sans-serif"; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText("★ The Town's Famous Café ★", 256, 67);
+  const tex = new THREE.CanvasTexture(cv); tex.colorSpace && (tex.colorSpace = THREE.SRGBColorSpace);
+  const banner = new THREE.Mesh(new THREE.PlaneGeometry(2.6, 0.65), new THREE.MeshBasicMaterial({ map: tex, side: THREE.DoubleSide })); banner.position.set(0, 2.55, 1.35); f.add(banner);
+  [-1.35, 1.35].forEach(dx => f.add(mesh(cyl(0.04, 0.04, 2.5, 8), '#c9915c', { x: dx, y: 1.3, z: 1.35 })));
+  const cols = ['#ff7ea6', '#ffd36b', '#7fd6c2', '#9b8cff', '#ff9f6b'];
+  for (let i = 0; i <= 12; i++) { const u = i / 12; const fl = mesh(new THREE.ConeGeometry(0.1, 0.2, 3), cols[i % 5], { x: -1.35 + 2.7 * u, y: 2.2 - Math.sin(u * PI) * 0.18, z: 1.35, rx: PI, cast: false }); fl.scale.z = 0.25; f.add(fl); }
+  const star = mesh(new THREE.OctahedronGeometry(0.2), '#ffd54a', { y: 3.05, cast: false }); star.scale.set(1, 1.3, 0.4); f.add(star);
+  animated.push(t => { star.rotation.y = t / 500; star.position.y = 3.05 + Math.sin(t / 700) * 0.06; });
+  addEventListener('storage', e => { if (e.key === FAME_KEY) f.visible = e.newValue === '1'; });
+}
+
 // ---------- 🐱 Cat Home (inside the road, front right, door facing the road): tap it to go inside ----------
 const CAT_HOME_TH = PI * 0.2;
 const CAT_HOME = pathPoint(CAT_HOME_TH).add(outward(CAT_HOME_TH).multiplyScalar(-2.6));
