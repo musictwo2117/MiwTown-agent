@@ -6,6 +6,7 @@ const base = s => String(s || '').split('/').filter(Boolean).pop() || '';
 const clip = (s, n = 40) => { s = String(s || ''); return s.length > n ? s.slice(0, n - 1) + '…' : s; };
 
 let input = '';
+
 process.stdin.on('data', c => { input += c; }).on('end', () => {
   let e = {};
   try { e = JSON.parse(input); } catch {}
@@ -39,6 +40,7 @@ process.stdin.on('data', c => { input += c; }).on('end', () => {
     sessionId: e.session_id || '',
     cwd: e.cwd || '',
   });
+
   // never block Claude: give up quickly if the office isn't running
   setTimeout(() => process.exit(0), 800);
   fetch(`http://127.0.0.1:${PORT}/state`, { method: 'POST', headers: { 'content-type': 'application/json' }, body })

@@ -14,6 +14,7 @@ const GONE_MS = 30 * 60 * 1000;   // silent for this long → leaves the room
 const JOB_TIMEOUT_MS = 30 * 60 * 1000;
 const MAX_RUNNING = 3;
 const CLAUDE = process.env.CLAUDE_BIN || (fs.existsSync(path.join(os.homedir(), '.local/bin/claude')) ? path.join(os.homedir(), '.local/bin/claude') : 'claude');
+
 // tasks sent from the UI may read and edit files in their folder, but never run commands or reach the web
 const TASK_FLAGS = ['--output-format', 'stream-json', '--verbose', '--permission-mode', 'acceptEdits',
   '--disallowedTools', 'Bash', 'WebFetch', 'WebSearch', 'NotebookEdit', 'KillShell', 'BashOutput'];
@@ -27,6 +28,7 @@ const jobs = {};
 
 function sweep() {
   const now = Date.now();
+
   for (const [id, a] of Object.entries(agents)) {
     if (now - a.ts > GONE_MS) delete agents[id];
     else if (now - a.ts > STALE_MS && a.state !== 'idle') { Object.assign(a, { state: 'idle', msg: '' }); a.history.push({ ts: now, state: 'idle', msg: '' }); }
@@ -38,6 +40,7 @@ function readJson(req, cb) {
   req.on('data', c => { body += c; if (body.length > 1e5) req.destroy(); });
   req.on('end', () => { try { cb(null, JSON.parse(body || '{}')); } catch (e) { cb(e); } });
 }
+
 function send(res, code, obj) {
   res.statusCode = code;
   res.setHeader('content-type', 'application/json');
@@ -70,53 +73,67 @@ function startJob({ prompt, cwd, resume, label }) {
   const job = { id, prompt, cwd, label, resumeOf: resume || null, status: 'running', startedAt: Date.now(), sessionId: null, log: [], result: '' };
   jobs[id] = job;
   let child;
+
   try { child = spawn(CLAUDE, args, { cwd, env: taskEnv(), stdio: ['ignore', 'pipe', 'pipe'] }); }
   catch (e) { Object.assign(job, { status: 'error', result: `Couldn't start Claude Code: ${e.message}` }); return { job }; }
+
   job.pid = child.pid;
   const note = line => { job.log.push(line.slice(0, 200)); if (job.log.length > 40) job.log.shift(); };
   let buf = '';
+
   child.stdout.on('data', c => {
     buf += c;
     let i;
+
     while ((i = buf.indexOf('\n')) >= 0) {
       const line = buf.slice(0, i); buf = buf.slice(i + 1);
       let ev; try { ev = JSON.parse(line); } catch { continue; }
       if (ev.session_id && !job.sessionId) job.sessionId = ev.session_id;
+
       if (ev.type === 'assistant') for (const part of ev.message?.content || []) {
         if (part.type === 'text' && part.text.trim()) note('💬 ' + part.text.trim());
         if (part.type === 'tool_use') note(`🔧 ${part.name}${part.input?.file_path ? ' ' + path.basename(part.input.file_path) : ''}`);
       }
+
       if (ev.type === 'result') { job.result = String(ev.result || ''); job.status = ev.is_error ? 'error' : 'done'; }
     }
   });
+
   let errText = '';
   child.stderr.on('data', c => { errText = (errText + c).slice(-2000); });
   child.on('error', e => Object.assign(job, { status: 'error', result: e.code === 'ENOENT' ? "Couldn't find the claude command. Set CLAUDE_BIN to its path." : e.message }));
+
   child.on('close', code => {
     clearTimeout(job.timer);
     if (job.status === 'running') Object.assign(job, { status: code === 0 ? 'done' : 'error', result: job.result || errText.trim() || `Stopped (exit ${code}).` });
     job.endedAt = Date.now();
   });
+
   job.timer = setTimeout(() => { note('⏱️ Took too long, stopping.'); child.kill('SIGTERM'); }, JOB_TIMEOUT_MS);
   job.child = child;
   return { job };
 }
+
 // live Bangkok weather from Open-Meteo (free, no key), refreshed at most every 10 minutes
 const WEATHER_URL = 'https://api.open-meteo.com/v1/forecast?latitude=13.7563&longitude=100.5018&current=temperature_2m,weather_code,cloud_cover&timezone=Asia%2FBangkok';
 let weather = { kind: 'clear', temp: null, at: 0 };
+
 function weatherKind(code, cloud) {
   if (code >= 95) return 'storm';
   if ((code >= 51 && code <= 67) || (code >= 80 && code <= 82)) return 'rain';
   if (code >= 2 || cloud >= 70) return 'cloudy';
   return 'clear';
 }
+
 async function getWeather() {
   if (Date.now() - weather.at < 10 * 60 * 1000) return weather;
+
   try {
     const r = await fetch(WEATHER_URL, { signal: AbortSignal.timeout(5000) });
     const c = (await r.json()).current;
     weather = { kind: weatherKind(c.weather_code, c.cloud_cover), temp: Math.round(c.temperature_2m), at: Date.now() };
   } catch { weather.at = Date.now() - 8 * 60 * 1000; }   // offline: keep the last reading, try again in 2 minutes
+
   return weather;
 }
 
@@ -137,6 +154,7 @@ http.createServer((req, res) => {
   // posting here from a browser always sends an Origin, and can't send JSON cross-site without a preflight we never answer
   if (url === '/state' && req.method === 'POST') {
     if (req.headers.origin || !/^application\/json\b/.test(req.headers['content-type'] || '')) return send(res, 403, { error: 'forbidden' });
+
     return readJson(req, (err, d) => {
       if (err) return send(res, 400, { error: 'bad json' });
       const id = String(d.id || d.name || 'agent');
@@ -167,12 +185,14 @@ http.createServer((req, res) => {
   // start a new task in a folder, or message an agent (continues its conversation in a fork)
   if (url === '/task' && req.method === 'POST') {
     if (!authed) return send(res, 403, { error: 'forbidden' });
+
     return readJson(req, (err, d) => {
       if (err) return send(res, 400, { error: 'bad json' });
       const prompt = String(d.prompt || '').trim();
       if (!prompt) return send(res, 400, { error: 'Write what you want done first.' });
       if (prompt.length > 4000) return send(res, 400, { error: 'Keep the task under 4,000 characters.' });
       let cwd, resume = null, label;
+
       if (d.agentId) {
         const a = agents[d.agentId];
         if (!a || !a.sessionId || !a.cwd) return send(res, 400, { error: "This agent can't take messages yet. It needs to do one more step first." });
@@ -185,6 +205,7 @@ http.createServer((req, res) => {
         if (typeof f === 'string') return send(res, 400, { error: f });
         cwd = f.abs; label = path.basename(cwd);
       }
+
       const r = startJob({ prompt, cwd, resume, label });
       if (r.error) return send(res, 429, { error: r.error });
       send(res, 200, publicJob(r.job));
@@ -192,6 +213,7 @@ http.createServer((req, res) => {
   }
 
   const stop = url.match(/^\/jobs\/([0-9a-f]+)\/stop$/);
+
   if (stop && req.method === 'POST') {
     if (!authed) return send(res, 403, { error: 'forbidden' });
     const j = jobs[stop[1]];
@@ -210,17 +232,21 @@ http.createServer((req, res) => {
   // the old addresses still work and lead to the pages' new homes
   const GO = { '/': '/agent/town.html', '/town': '/agent/town.html', '/room': '/agent/room.html', '/game': '/game/game.html' };
   if (GO[url] && req.method === 'GET') { res.statusCode = 302; res.setHeader('location', GO[url] + (req.url.includes('?') ? '?' + req.url.split('?').slice(1).join('?') : '')); return res.end(); }   // keep ?fps and the like
+
   // pages, scripts, styles and models from agent/, game/ and shared/ (never the server itself or the hook)
   if (req.method === 'GET' && /^\/(agent|game|shared)\//.test(url)) {
     let file; try { file = path.resolve(ROOT, decodeURIComponent(url).slice(1)); } catch { res.statusCode = 400; return res.end(); }
     const ext = path.extname(file), type = TYPES[ext];
     const inside = ['agent', 'game', 'shared'].some(d => file.startsWith(path.join(ROOT, d) + path.sep));
+
     if (type && inside && !['server.js', 'hook.js'].includes(path.basename(file)) && fs.existsSync(file)) {
       res.setHeader('content-type', type);
+
       if (ext === '.html') {
         res.setHeader('cache-control', 'no-store');
         return res.end(fs.readFileSync(file, 'utf8').replace('__MIW_TOKEN__', TOKEN));
       }
+
       if (ext === '.js' || ext === '.css') { if (!file.includes(path.sep + 'vendor' + path.sep)) res.setHeader('cache-control', 'no-store'); }
       return fs.createReadStream(file).pipe(res);
     }

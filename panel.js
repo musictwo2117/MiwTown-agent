@@ -1,6 +1,7 @@
 // Miw's Town: send new tasks, message agents, and play with them. Shared by the town and the room.
 (() => {
   const TOKEN = document.querySelector('meta[name="miw-token"]')?.content || '';
+
   const api = (url, body) => fetch(url, {
     method: body ? 'POST' : 'GET', cache: 'no-store',
     headers: { 'content-type': 'application/json', 'x-miw-token': TOKEN },
@@ -13,6 +14,7 @@
     kids.flat().forEach(k => k != null && n.append(k.nodeType ? k : String(k)));
     return n;
   }
+
   const ago = ts => { const s = Math.max(0, (Date.now() - ts) / 1000); return s < 60 ? 'just now' : s < 3600 ? `${Math.floor(s / 60)}m ago` : `${Math.floor(s / 3600)}h ago`; };
 
   // nicknames live in this browser only
@@ -141,34 +143,41 @@
 
   // ---------- jobs ----------
   let jobs = [];
+
   async function refreshJobs() {
     try { jobs = await api('jobs'); } catch { return; }
     const running = jobs.filter(j => j.status === 'running').length;
     runBadge.hidden = !running; runBadge.textContent = `${running} running`;
     if (view) render();
   }
+
   setInterval(refreshJobs, 2000); refreshJobs();
 
   function jobCard(j) {
     const pill = el('span', { className: `pill ${j.status}` }, j.status === 'running' ? '⏳ Working' : j.status === 'done' ? '✅ Done' : '⚠️ Problem');
+
     const card = el('div', { className: 'job' },
       el('div', { className: 'jt' }, j.resumeOf ? '💬 ' : '📁 ', j.label || 'Task', pill),
       el('p', { className: 'jp' }, j.prompt),
     );
+
     if (j.log.length && j.status === 'running') { const l = el('div', { className: 'jl' }, j.log.slice(-8).join('\n')); card.append(l); setTimeout(() => { l.scrollTop = l.scrollHeight; }); }
     if (j.result) card.append(el('div', { className: 'jr' }, j.result));
     card.append(el('small', { className: 'hint', style: 'display:block' }, `${j.cwd} · ${ago(j.startedAt)}`));
+
     if (j.status === 'running') {
       const b = el('button', { className: 'stop' }, '✋ Stop');
       b.onclick = async () => { b.disabled = true; try { await api(`jobs/${j.id}/stop`, {}); } catch (e) { toast(e.message); } refreshJobs(); };
       card.append(b);
     }
+
     return card;
   }
 
   // ---------- new task ----------
   const draft = { cwd: '', prompt: '' };
   let folders = [];
+
   async function openNewTask() {
     view = { kind: 'task' }; drawer.hidden = false;
     try { folders = await api('folders'); } catch {}
@@ -181,6 +190,7 @@
       el('div', { className: 'face', style: 'background:linear-gradient(140deg,#ffd6e0,#ffe9c9);--s:#ffd27a' }, '✨'),
       el('div', {}, el('h2', {}, 'New task'), el('small', {}, 'A new friend moves in and gets to work')),
       closeBtn());
+
     const list = el('datalist', { id: 'miwFolders' }, folders.map(f => el('option', { value: f })));
     const cwd = el('input', { className: 'field', value: draft.cwd, placeholder: '~/projects/my-app', autocomplete: 'off' });
     cwd.setAttribute('list', 'miwFolders');
@@ -189,20 +199,25 @@
     cwd.oninput = () => { draft.cwd = cwd.value; err.hidden = true; };
     prompt.oninput = () => { draft.prompt = prompt.value; err.hidden = true; };
     const go = el('button', { className: 'go' }, '✨ Start task');
+
     go.onclick = async () => {
       if (!draft.cwd.trim()) { err.textContent = 'Pick a folder for the task.'; err.hidden = false; return; }
       if (!draft.prompt.trim()) { err.textContent = 'Write what you want done first.'; err.hidden = false; return; }
       go.disabled = true; go.textContent = 'Starting…';
+
       try { await api('task', { cwd: draft.cwd.trim(), prompt: draft.prompt.trim() }); draft.prompt = ''; toast('Task started. Watch for a new friend in town!'); await refreshJobs(); }
       catch (e) { err.textContent = e.message; err.hidden = false; }
+
       go.disabled = false; go.textContent = '✨ Start task'; render();
     };
+
     const form = el('div', { className: 'card' },
       el('label', { className: 'lbl2' }, '📁 Project folder'), cwd, list,
       el('p', { className: 'hint' }, 'Any folder inside your home folder.'),
       el('label', { className: 'lbl2', style: 'margin-top:12px' }, '📝 What should they do?'), prompt,
       el('div', { className: 'lock' }, '🔒', el('span', {}, 'Can read and edit files in this folder only. Can’t run commands or browse the web.')),
       err, go);
+
     const recent = jobs.filter(j => !j.resumeOf);
     return [head, el('div', { className: 'db' }, form,
       el('div', {}, el('h3', {}, 'Your tasks'), recent.length ? recent.map(jobCard) : el('p', { className: 'hint' }, 'Tasks you start show up here with their results.')))];
@@ -219,6 +234,7 @@
     const face = el('div', { className: 'face', title: 'Drag to spin', style: `background:${me.color};--s:${STATE_COLOR[me.state]}` }, SPECIES[me.species].emoji);
     if (portrait) { portrait.show(me); face.replaceChildren(portrait.el); }
     const title = view.renaming ? renameBox(me) : el('h2', {}, me.name, el('em', {}, 'Lv ' + lv));
+
     const head = el('div', { className: 'dh' }, face,
       el('div', { style: 'flex:1;min-width:0' }, title,
         el('small', {}, `${STATE_ICON[me.state]} ${STATE_LABEL[me.state]}${me.msg ? ' · ' + me.msg : ''}`),
@@ -241,13 +257,17 @@
     const err = el('p', { className: 'err', hidden: true });
     msg.oninput = () => { msgDraft[me.id] = msg.value; err.hidden = true; };
     const go = el('button', { className: 'go' }, '💬 Send message');
+
     go.onclick = async () => {
       if (!msg.value.trim()) { err.textContent = 'Write a message first.'; err.hidden = false; return; }
       go.disabled = true; go.textContent = 'Sending…';
+
       try { await api('task', { agentId: me.id, prompt: msg.value.trim() }); msgDraft[me.id] = ''; toast(`Sent! A copy of ${me.name} picks it up.`); await refreshJobs(); }
       catch (e) { err.textContent = e.message; err.hidden = false; }
+
       go.disabled = false; go.textContent = '💬 Send message'; render();
     };
+
     const talk = el('div', { className: 'card' },
       el('label', { className: 'lbl2' }, `💬 Message ${me.name}`),
       canTalk ? [msg, el('div', { className: 'lock' }, '🔒', el('span', {}, `A copy of this conversation picks up your message and can read and edit files in ${me.cwd.replace(/^\/Users\/[^/]+/, '~')}. Your open Claude Code window isn’t changed.`)), err, go]
@@ -256,6 +276,7 @@
     const hist = (me.history || []).slice().reverse();
     const mine = jobs.filter(j => (j.sessionId && j.sessionId.startsWith(me.id)) || (me.sessionId && j.resumeOf === me.sessionId));
     const worn = wearOf(me);
+
     const wardrobe = el('div', { className: 'card' },
       el('label', { className: 'lbl2' }, '👗 Wardrobe'),
       el('div', { className: 'wear' }, [{ key: 'none', icon: '🙅', name: 'Nothing', lv: 1 }, ...WEAR].map(w => {
@@ -266,6 +287,7 @@
         return b;
       })),
       el('p', { className: 'hint' }, 'Level up by working and resting. New things unlock at Lv 2, 3, 5, 7 and 10.'));
+
     return [head, el('div', { className: 'db' },
       el('div', { className: 'acts' }, pet, look, ren, fol),
       todayCard(me),
@@ -290,9 +312,11 @@
     xpStore[me.id] = (xpStore[me.id] || 0) + 5; saveXp(); renderHud(); render();
     burst(me, ['💖', '💕', '✨', '💗']);
   }
+
   // little emojis that float up from an agent's head
   function burst(me, icons, n = 6) {
     const p = me.cat.g.position, [x, y] = toScreen(new THREE.Vector3(p.x, p.y + 1.6, p.z));
+
     for (let i = 0; i < n; i++) {
       const h = el('div', { className: 'heart' }, icons[i % icons.length]);
       h.style.left = x + 'px'; h.style.top = y + 'px'; h.style.setProperty('--dx', `${(Math.random() - 0.5) * 80}px`); h.style.animationDelay = `${i * 80}ms`;
@@ -311,7 +335,9 @@
     return JSON.stringify([view, me.name, me.state, me.msg, me.species, me.history?.length, xpStore[me.id], me.sessionId, wearOf(me), Math.floor(Date.now() / 60000), followId === me.id,
       jobs.filter(j => (j.sessionId && j.sessionId.startsWith(me.id)) || (me.sessionId && j.resumeOf === me.sessionId))]);
   }
+
   let shown = '';
+
   function render() {
     if (!view) return;
     const active = document.activeElement;
@@ -322,6 +348,7 @@
     shown = sig;
     drawer.replaceChildren(...(view.kind === 'task' ? renderTask() : view.kind === 'place' ? renderPlace() : renderAgent()));
   }
+
   setInterval(() => { if (view && view.kind !== 'task') render(); }, 1500);
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && view && !view.renaming) close(); });
 
@@ -330,6 +357,7 @@
   const WEAR_KEY = 'miw-town-wear';
   const readWear = () => { try { return JSON.parse(localStorage.getItem(WEAR_KEY) || '{}'); } catch { return {}; } };
   const setWear = (id, key) => { const m = readWear(); m[id] = key; try { localStorage.setItem(WEAR_KEY, JSON.stringify(m)); } catch {} };
+
   // an agent wears what you picked while it's unlocked, otherwise the newest thing it has unlocked
   function wearOf(me) {
     const pick = readWear()[me.id], lv = lvl(xpStore[me.id] || 0);
@@ -338,6 +366,7 @@
     if (ok.some(w => w.key === pick)) return pick;
     return (ok[ok.length - 1] || { key: 'none' }).key;
   }
+
   function dressUp(me) {
     const key = wearOf(me);
     if (me.wornOn === me.cat && me.wornKey === key) return;
@@ -346,16 +375,19 @@
     me.wornParts = makeWear(key === 'scarf' && me.species === 'penguin' ? 'none' : key, me.cat, me.species === 'miw');
     me.wornOn = me.cat; me.wornKey = key;
   }
+
   // level ups: a little party, and the new thing goes straight on
   setInterval(() => {
     for (const me of agents.values()) {
       const lv = lvl(xpStore[me.id] || 0);
+
       if (me.seenLv && lv > me.seenLv) {
         const item = WEAR.find(w => w.lv > me.seenLv && w.lv <= lv);
         burst(me, ['🎉', '✨', '⭐', '🎊']);
         toast(item ? `🎉 ${me.name} reached Lv ${lv} and unlocked a ${item.name.toLowerCase()} ${item.icon}` : `🎉 ${me.name} reached Lv ${lv}!`);
         if (item) setWear(me.id, item.key);
       }
+
       me.seenLv = lv;
       dressUp(me);
     }
@@ -364,6 +396,7 @@
   // ---------- friends say hi when one walks up to another resting friend ----------
   setInterval(() => {
     const list = [...agents.values()];
+
     for (const me of list) {
       const arrived = me.wasWalking && !me.walking;
       me.wasWalking = me.walking;
@@ -383,11 +416,13 @@
   window.isRaining = () => window.weather.kind === 'rain' || window.weather.kind === 'storm';
   window.weatherIcon = dayIcon => ({ cloudy: '☁️', rain: '🌧️', storm: '⛈️' })[window.weather.kind] || dayIcon;
   window.weatherTemp = () => window.weather.temp != null ? ` · ${window.weather.temp}°` : '';
+
   async function refreshWeather() {
     const q = new URLSearchParams(location.search).get('weather');
     if (q in WET) { window.weather.kind = q; return; }
     try { const r = await fetch('weather', { cache: 'no-store' }); if (r.ok) Object.assign(window.weather, await r.json()); } catch {}
   }
+
   refreshWeather(); setInterval(refreshWeather, 10 * 60 * 1000);
 
   // ---------- 3D portrait in the agent card (drag to spin) ----------
@@ -404,20 +439,24 @@
     r.domElement.addEventListener('pointerdown', e => { drag = e.clientX; r.domElement.setPointerCapture(e.pointerId); });
     r.domElement.addEventListener('pointermove', e => { if (drag != null) { spin += (e.clientX - drag) * 0.035; drag = e.clientX; } });
     r.domElement.addEventListener('pointerup', () => { drag = null; });
+
     function show(me) {
       const k = [me.species, me.color, wearOf(me)].join();
       if (k === key) return;
       key = k;
+
       if (model) {
         const inScene = new Set();
         scene.traverse(o => o.geometry && inScene.add(o.geometry));
         model.g.traverse(o => { if (o.geometry && !inScene.has(o.geometry)) o.geometry.dispose(); });
         sc.remove(model.g);
       }
+
       model = makeCharacter(me.species, me.color);
       makeWear(wearOf(me), model, me.species === 'miw');
       sc.add(model.g);
     }
+
     (function frame(t) {
       requestAnimationFrame(frame);
       if (!model || !r.domElement.isConnected) return;
@@ -426,39 +465,48 @@
       model.body.position.y = Math.max(0, Math.sin(t / 380)) * 0.04;
       r.render(sc, cam);
     })(0);
+
     return { el: r.domElement, show };
   })();
 
   // ---------- timelines: what each agent did today (Bangkok time) ----------
   const bkk = opts => new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Bangkok', hourCycle: 'h23', ...opts });
   const hhmm = ts => bkk({ hour: '2-digit', minute: '2-digit' }).format(ts);
+
   function dayStart() {
     const p = bkk({ hour: '2-digit', minute: '2-digit', second: '2-digit' }).formatToParts(new Date()), g = t => +p.find(x => x.type === t).value;
     return Date.now() - ((g('hour') * 60 + g('minute')) * 60 + g('second')) * 1000;
   }
+
   function segments(me) {
     const now = Date.now(), from = dayStart(), h = (me.history || []).filter(e => e.ts < now), out = [];
     h.forEach((e, i) => { const a = Math.max(e.ts, from), b = i + 1 < h.length ? h[i + 1].ts : now; if (b > a) out.push({ state: e.state, a, b }); });
     return out;
   }
+
   // the bar runs from this agent's first step today (at least an hour back) to now
   const barStart = seg => Math.min(seg[0].a, Date.now() - 3600 * 1000);
+
   window.timelineBar = (me, big) => {
     const seg = segments(me), bar = el('div', { className: 'tl' + (big ? ' big' : '') });
     if (!seg.length) return bar;
     const s0 = barStart(seg), span = Date.now() - s0;
+
     seg.forEach(sg => bar.append(el('i', {
       title: `${STATE_LABEL[sg.state]} · ${hhmm(sg.a)}–${hhmm(sg.b)}`,
       style: `left:${(sg.a - s0) / span * 100}%;width:${Math.max(0.6, (sg.b - sg.a) / span * 100)}%;background:${STATE_COLOR[sg.state]}`,
     })));
+
     return bar;
   };
+
   function todayCard(me) {
     const seg = segments(me);
     if (!seg.length) return null;
     const total = {};
     seg.forEach(sg => { total[sg.state] = (total[sg.state] || 0) + sg.b - sg.a; });
     const dur = ms => ms < 60000 ? '<1m' : ms < 3600000 ? `${Math.round(ms / 60000)}m` : `${Math.floor(ms / 3600000)}h ${Math.round(ms % 3600000 / 60000)}m`;
+
     return el('div', { className: 'card' },
       el('label', { className: 'lbl2' }, '🕒 Today'),
       timelineBar(me, true),
@@ -474,14 +522,18 @@
     label.addEventListener('click', () => P.href ? (location.href = P.href) : openPlace(i));
     return { i, key, icon: P.icon, name: P.name, desc: P.desc, rest: key ? (key === 'idle' ? 0 : null) : P.rest, group: P.group, href: P.href, tint: key ? TINT[key] : '#fff0f5' };
   });
+
   const whoIsAt = pl => [...agents.values()].filter(a => pl.rest == null ? a.state === pl.key : a.state === 'idle' && (a.rest || 0) === pl.rest);
   function openPlace(i) { view = { kind: 'place', i }; drawer.hidden = false; render(); }
+
   function renderPlace() {
     const pl = places[view.i], here = whoIsAt(pl);
+
     const head = el('div', { className: 'dh' },
       el('div', { className: 'face nodot', style: `background:${pl.tint}` }, pl.icon),
       el('div', { style: 'flex:1;min-width:0' }, el('h2', {}, pl.name), el('small', {}, pl.desc || '')),
       closeBtn());
+
     const list = here.length
       ? el('div', { className: 'who' }, here.map(a => {
         const row = el('button', { className: 'whorow' },
@@ -489,10 +541,12 @@
           el('div', { style: 'min-width:0;flex:1' }, el('b', {}, a.name, el('em', {}, 'Lv ' + lvl(xpStore[a.id] || 0))),
             el('small', {}, a.walking ? '🚶 On the way…' : `${STATE_ICON[a.state]} ${a.msg || STATE_LABEL[a.state]}`)),
           el('span', {}, '›'));
+
         row.onclick = () => openAgent(a.id);
         return row;
       }))
       : el('p', { className: 'hint' }, 'Nobody here right now.');
+
     return [head, el('div', { className: 'db' }, el('div', {}, el('h3', {}, here.length ? `Here now · ${here.length}` : 'Here now'), list))];
   }
 
@@ -510,6 +564,7 @@
   paintSnd();
   tools.insertBefore(sndBtn, document.getElementById('tCam'));
   let ac = null, master, rainGain, noiseBuf;
+
   function startAudio() {
     if (ac) { ac.resume(); return; }
     ac = new (window.AudioContext || window.webkitAudioContext)();
@@ -523,21 +578,26 @@
     rainGain = ac.createGain(); rainGain.gain.value = 0;
     noise.connect(lp).connect(hp).connect(rainGain).connect(master); noise.start();
   }
+
   const blip = (t0, f0, f1, len, peak) => {
     const o = ac.createOscillator(), g = ac.createGain();
     o.frequency.setValueAtTime(f0, t0); o.frequency.exponentialRampToValueAtTime(f1, t0 + len * 0.8);
     g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(peak, t0 + len * 0.15); g.gain.exponentialRampToValueAtTime(0.0001, t0 + len);
     o.connect(g).connect(master); o.start(t0); o.stop(t0 + len + 0.02);
   };
+
   const chirp = at => { const n = 2 + Math.floor(Math.random() * 3), f = 2600 + Math.random() * 1400; for (let i = 0; i < n; i++) blip(at + i * 0.13, f, f * 1.45, 0.1, 0.045); };
   const cricket = at => { const f = 4300 + Math.random() * 300; for (let i = 0; i < 3; i++) blip(at + i * 0.07, f, f, 0.045, 0.016); };
+
   function thunder(at) {
     const src = ac.createBufferSource(), lp = ac.createBiquadFilter(), g = ac.createGain();
     src.buffer = noiseBuf; lp.type = 'lowpass'; lp.frequency.value = 160;
     g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(0.9, at + 0.15); g.gain.exponentialRampToValueAtTime(0.0001, at + 3);
     src.connect(lp).connect(g).connect(master); src.start(at); src.stop(at + 3.1);
   }
+
   let nextBird = 0, nextCricket = 0, lastFlash = -1;
+
   setInterval(() => {
     if (!ac || !soundOn) return;
     const now = ac.currentTime, dk = darkness(hourNow()), kind = window.weather.kind, wet = kind === 'rain' || kind === 'storm';
@@ -548,12 +608,14 @@
     const cycle = Math.floor(performance.now() / 9000);
     if (kind === 'storm' && cycle !== lastFlash && performance.now() % 9000 > 140) { lastFlash = cycle; thunder(now + 0.6); }
   }, 200);
+
   sndBtn.onclick = () => {
     soundOn = !soundOn;
     try { localStorage.setItem(SOUND_KEY, soundOn ? 'on' : 'off'); } catch {}
     paintSnd();
     if (soundOn) startAudio(); else if (ac) ac.suspend();
   };
+
   // browsers only play sound after a click, so a remembered "on" starts with your first tap
   if (soundOn) addEventListener('pointerdown', () => soundOn && startAudio(), { once: true });
 
@@ -568,10 +630,12 @@
   const paintBell = () => { bellBtn.replaceChildren(bellOn ? '🔔' : '🔕', el('span', { className: 'txt' }, 'Alerts')); bellBtn.setAttribute('aria-pressed', String(bellOn)); };
   paintBell();
   tools.insertBefore(bellBtn, sndBtn);
+
   bellBtn.onclick = async () => {
     if (!bellOn && window.Notification && Notification.permission !== 'granted') {
       if (await Notification.requestPermission() !== 'granted') { toast('Notifications are blocked in this browser.'); return; }
     }
+
     bellOn = !bellOn && !!window.Notification;
     try { localStorage.setItem(BELL_KEY, bellOn ? 'on' : 'off'); } catch {}
     paintBell();
@@ -583,6 +647,7 @@
     const now = ac.currentTime;
     notes.forEach((f, i) => blip(now + i * 0.12, f, f, 0.35, 0.08));
   };
+
   function heyYou(me, kind, text) {
     const a = el('div', { className: 'alert', style: `--s:${STATE_COLOR[me.state]}` }, el('span', {}, text));
     const x = el('button', { title: 'Dismiss' }, '✕');
@@ -593,14 +658,18 @@
     while (alerts.childElementCount > 3) alerts.lastChild.remove();
     setTimeout(gone, kind === 'done' ? 6000 : 15000);
     ding(kind === 'done' ? [880, 1320] : kind === 'stuck' ? [520, 390] : [660, 880, 660]);
+
     if (bellOn && document.hidden) {
       try { const n = new Notification(BASE_TITLE, { body: text, tag: me.id }); n.onclick = () => { focus(); openAgent(me.id); n.close(); }; } catch {}
     }
   }
+
   const needsYou = me => me.state === 'error' || (me.state === 'idle' && /waiting for you/i.test(me.msg || ''));
   const seen = new Map();
+
   setInterval(() => {
     let n = 0;
+
     for (const me of agents.values()) {
       if (me.id.startsWith('demo')) continue;
       const busy = me.state !== 'idle' && me.state !== 'error', need = needsYou(me);
@@ -608,9 +677,11 @@
       const before = seen.get(me.id);
       seen.set(me.id, { busy, need, state: me.state });
       if (!before) continue; // first sighting: don't shout about the past
+
       if (need && !before.need) heyYou(me, me.state === 'error' ? 'stuck' : 'wait', me.state === 'error' ? `🐞 ${me.name} is stuck${me.msg ? ': ' + me.msg : ''}` : `🙋 ${me.name} is waiting for you`);
       else if (!need && before.busy && me.state === 'idle') heyYou(me, 'done', `✅ ${me.name} finished`);
     }
+
     for (const id of seen.keys()) if (!agents.has(id)) seen.delete(id);
     document.title = n ? `(${n}) ${BASE_TITLE}` : BASE_TITLE;
   }, 1000);
@@ -619,6 +690,7 @@
   let followId = null, zoomTo = null;
   const pill = el('div', { id: 'following', hidden: true });
   document.body.append(pill);
+
   window.followAgent = id => {
     const me = agents.get(id); if (!me) return;
     followId = id; zoomTo = Math.min(controls.maxZoom, Math.max(camera.zoom, 1.8));
@@ -626,8 +698,10 @@
     stop.onclick = unfollow;
     pill.replaceChildren(`🎯 Following ${me.name}`, stop); pill.hidden = false;
   };
+
   function unfollow() { followId = null; zoomTo = null; pill.hidden = true; if (view && view.kind === 'agent') render(); }
   const shift = new THREE.Vector3();
+
   animated.push(() => {
     if (!followId) return;
     const me = agents.get(followId);
@@ -635,11 +709,13 @@
     // slide the target and the camera together, so the angle you picked stays the same
     shift.copy(me.cat.g.position).sub(controls.target).multiplyScalar(0.08);
     controls.target.add(shift); camera.position.add(shift);
+
     if (zoomTo != null) {
       camera.zoom += (zoomTo - camera.zoom) * 0.08; camera.updateProjectionMatrix();
       if (Math.abs(zoomTo - camera.zoom) < 0.01) zoomTo = null;
     }
   });
+
   // turning the view or resetting it lets go; zooming in and out keeps following
   renderer.domElement.addEventListener('pointerdown', e => { if (e.button === 0 && followId) { const s = [e.clientX, e.clientY]; const up = ev => { if (Math.hypot(ev.clientX - s[0], ev.clientY - s[1]) > 5) unfollow(); removeEventListener('pointerup', up); }; addEventListener('pointerup', up); } });
   renderer.domElement.addEventListener('wheel', () => { zoomTo = null; }, { passive: true });
@@ -648,6 +724,7 @@
   // ---------- photo: save a framed picture of the scene, names included ----------
   const camBtn = el('button', { id: 'tPhoto', title: 'Take a photo' }, '📸', el('span', { className: 'txt' }, 'Photo'));
   tools.insertBefore(camBtn, document.getElementById('tCam'));
+
   camBtn.onclick = () => {
     renderer.render(scene, camera);
     const src = renderer.domElement, W = src.width, H = src.height, k = W / innerWidth;
@@ -655,9 +732,11 @@
     const c = el('canvas', { width: W + pad * 2, height: H + pad + foot }), g = c.getContext('2d');
     g.fillStyle = '#fffaf5'; g.fillRect(0, 0, c.width, c.height);
     g.drawImage(src, pad, pad);
+
     // name tags, drawn the way the page shows them
     if (!document.getElementById('labels').classList.contains('hide-names')) {
       g.font = `700 ${Math.round(12 * k)}px Nunito, sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle';
+
       for (const me of agents.values()) {
         const p = me.cat.g.position, [x, y] = toScreen(new THREE.Vector3(p.x, p.y - 0.25, p.z));
         const w = g.measureText(me.name).width + 16 * k, h = 20 * k, X = pad + x * k, Y = pad + y * k + 14 * k;
@@ -666,6 +745,7 @@
         g.fillStyle = '#fff'; g.fillText(me.name, X, Y + k);
       }
     }
+
     const now = new Date(), when = now.toLocaleString('en-GB', { timeZone: 'Asia/Bangkok', day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
     const list = [...agents.values()], working = list.filter(a => a.state !== 'idle' && a.state !== 'error').length;
     g.textBaseline = 'middle'; g.textAlign = 'left'; g.fillStyle = '#4b3442';
@@ -675,6 +755,7 @@
     g.fillText(`${list.length} friend${list.length === 1 ? '' : 's'} · ${working} working · ${when}`, pad + W, pad + H + foot / 2);
     document.body.append(Object.assign(el('div', { className: 'flash' }), { onanimationend() { this.remove(); } }));
     ding([1200, 1600]);
+
     c.toBlob(b => {
       const stamp = now.toLocaleString('sv-SE', { timeZone: 'Asia/Bangkok' }).slice(0, 16).replace(/[: ]/g, '-');
       const a = el('a', { href: URL.createObjectURL(b), download: `miws-town-${stamp}.png` });
@@ -696,12 +777,14 @@
   const ray = new THREE.Raycaster(), ndc = new THREE.Vector2();
   let down = null;
   renderer.domElement.addEventListener('pointerdown', e => { down = [e.clientX, e.clientY]; });
+
   renderer.domElement.addEventListener('pointerup', e => {
     if (!down || Math.hypot(e.clientX - down[0], e.clientY - down[1]) > 5) return;
     ndc.set(e.clientX / innerWidth * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);
     ray.setFromCamera(ndc, camera);
     const list = [...agents.values()];
     const hit = ray.intersectObjects(list.map(a => a.cat.g), true)[0];
+
     if (!hit) {
       const tapped = ray.intersectObjects(places.filter(p => p.group).map(p => p.group), true)[0];
       if (!tapped) return;
@@ -709,9 +792,11 @@
       if (pl) pl.href ? (location.href = pl.href) : openPlace(pl.i);
       return;
     }
+
     const me = list.find(a => { let o = hit.object; while (o) { if (o === a.cat.g) return true; o = o.parent; } return false; });
     if (me) openAgent(me.id);
   });
+
   renderer.domElement.addEventListener('pointermove', e => {
     if (e.buttons) return;
     ndc.set(e.clientX / innerWidth * 2 - 1, -(e.clientY / innerHeight) * 2 + 1);

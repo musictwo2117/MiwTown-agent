@@ -3,6 +3,7 @@ const PI = Math.PI;
 
 // ---------- renderer / camera ----------
 const renderer = new THREE.WebGLRenderer({ antialias: true });
+
 renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -12,10 +13,14 @@ const scene = new THREE.Scene();
 const VIEW = 25;
 const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 200);
 const CAM_HOME = new THREE.Vector3(26, 17.6, 24.5);
+
 // aimed a little low so the home and the top of its floating island sit between the toolbar and the dock
 const CENTER = new THREE.Vector3(4.3, -1.4, 2.5);
+
 camera.position.copy(CAM_HOME);
+
 const controls = new THREE.OrbitControls(camera, renderer.domElement);
+
 controls.enableDamping = true;
 controls.enablePan = false;
 controls.minPolarAngle = 0.55; controls.maxPolarAngle = 1.15;
@@ -32,12 +37,16 @@ function resize() {
   camera.updateProjectionMatrix();
   renderer.setSize(w, h);
 }
+
 addEventListener('resize', resize); resize();
 
 // ---------- lights ----------
 const hemi = new THREE.HemisphereLight(0xfff4ea, 0xd9b0b4, 0.47);
+
 scene.add(hemi);
+
 const sun = new THREE.DirectionalLight(0xfff3e6, 0.56);
+
 sun.position.set(9, 17, 11);
 sun.castShadow = true;
 sun.shadow.mapSize.set(2048, 2048);
@@ -46,16 +55,20 @@ sun.shadow.radius = 3;
 sun.shadow.bias = -0.0005;
 sun.position.add(CENTER); sun.target.position.copy(CENTER);
 scene.add(sun, sun.target);
+
 const fill = new THREE.DirectionalLight(0xffeef2, 0.24);
+
 fill.position.copy(CAM_HOME); fill.target.position.copy(CENTER);
 scene.add(fill, fill.target);
 
 // ---------- helpers ----------
 const mats = {};
+
 const M = (c, extra) => {
   const k = c + JSON.stringify(extra || {});
   return mats[k] || (mats[k] = new THREE.MeshLambertMaterial({ color: c, ...extra }));
 };
+
 function mesh(geo, color, { x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0, s, cast = true, recv = false, mat } = {}) {
   const m = new THREE.Mesh(geo, mat || M(color));
   m.position.set(x, y, z); m.rotation.set(rx, ry, rz);
@@ -63,8 +76,10 @@ function mesh(geo, color, { x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0, s, cast
   m.castShadow = cast; m.receiveShadow = recv;
   return m;
 }
+
 // soft, rounded-edge boxes everywhere (cached per size) so nothing looks sharp
 const boxCache = {};
+
 const box = (w, h, d) => {
   const r = Math.min(0.07, Math.min(w, h, d) * 0.25);
   if (r < 0.012) return new THREE.BoxGeometry(w, h, d);
@@ -77,25 +92,34 @@ const box = (w, h, d) => {
   geo.computeVertexNormals();
   return (boxCache[key] = geo);
 };
+
 const sph = (r, seg = 20) => new THREE.SphereGeometry(r, seg, Math.round(seg * 0.75));
 const cyl = (rt, rb, h, seg = 20) => new THREE.CylinderGeometry(rt, rb, h, seg);
 const cone = (r, h, seg = 20) => new THREE.ConeGeometry(r, h, seg);
+
 function rng(seed) { let s = seed; return () => (s = (s * 16807) % 2147483647) / 2147483647; }
 
 // ---------- room shell ----------
 // the left wing (left wall, bookshelf, sofa, bedroom) and the east wing (kitchen, bathroom) are laid out
 // in their own coordinates, then slid toward the middle so the living room stays snug
 const LEFT = new THREE.Group(), EAST = new THREE.Group();
+
 LEFT.position.x = 1.8; EAST.position.x = -1.2;
 scene.add(LEFT, EAST);
+
 const WALL_H = 4.6;
+
 // the room spans x -5.2..13.8 (living room, kitchen, bathroom) and z -7..7
 const RX0 = -5.2, RX1 = 13.8, RCX = (RX0 + RX1) / 2, RW = RX1 - RX0;
+
 for (let i = 0; i < RW; i++) scene.add(mesh(box(1, 0.12, 14), i % 2 ? '#f3d4ae' : '#eccb9f', { x: RX0 + 0.5 + i, y: 0.06, cast: false, recv: true }));
+
 scene.add(mesh(box(RW + 0.3, WALL_H, 0.3), '#fde4ec', { x: RCX, y: WALL_H / 2, z: -7.15, recv: true }));
 LEFT.add(mesh(box(0.3, WALL_H, 14.3), '#fff0df', { x: -7.15, y: WALL_H / 2, recv: true }));
+
 for (let x = RX0 + 0.5; x < 6.5; x += 1) scene.add(mesh(box(0.4, WALL_H - 0.5, 0.02), '#fad3df', { x, y: WALL_H / 2 + 0.1, z: -6.99, cast: false }));
 for (let z = -6, k = 0; z < 7; z += 1.3, k++) for (let y = 1.1; y < WALL_H - 0.3; y += 1.1) LEFT.add(mesh(sph(0.07, 8), '#f6d2b0', { x: -6.99, y: y + (k % 2) * 0.55, z, cast: false }));
+
 scene.add(mesh(box(RW + 0.3, 0.32, 0.12), '#eab3c4', { x: RCX, y: 0.22, z: -6.96, cast: false }));
 LEFT.add(mesh(box(0.12, 0.32, 14.3), '#e8c39f', { x: -6.96, y: 0.22, cast: false }));
 scene.add(mesh(box(RW + 0.3, 0.18, 0.4), '#f7c6d4', { x: RCX, y: WALL_H + 0.09, z: -7.15 }));
@@ -113,7 +137,9 @@ const PLACES = {
   syncing:     { icon: '📡', name: 'Router Nook', desc: 'Handing off to helpers and tools', x: 2.6,  z: -5.25, sx: 1, sz: 0, face: null, label: [2.6, 4.3, -6.8], via: [[0.2, -2.6]] },
   error:       { icon: '🐞', name: 'Bug Rug',     desc: 'Something failed, needs a look',   x: 4.6,  z: 4.5,  sx: 1, sz: 0, face: null, label: [4.6, 1.2, 4.6] },
 };
+
 Object.values(PLACES).forEach(P => { P.labelPos = new THREE.Vector3(...P.label); });
+
 const STATE_LABEL = { idle: 'Resting', thinking: 'Thinking', writing: 'Writing', researching: 'Researching', executing: 'Running', syncing: 'Syncing', error: 'Stuck' };
 const STATE_ICON = { idle: '💤', thinking: '💭', writing: '✏️', researching: '📚', executing: '⚙️', syncing: '📮', error: '🐞' };
 const STATE_COLOR = { idle: '#f6c35b', thinking: '#b9a6f5', writing: '#ffb36b', researching: '#7fb8ee', executing: '#7cc68a', syncing: '#e8c547', error: '#f07878' };
@@ -127,10 +153,12 @@ const clouds = [];
 const starMat = new THREE.PointsMaterial();
 const rand = rng(42);
 const BOOKS = ['#ff9fb5', '#8fc1f0', '#ffd27a', '#b9a6f5', '#9fd49a', '#ffb38a', '#f49a91'];
+
 // Blender-sculpted furniture (models/room.py): piece() remembers what a block of code built; once that
 // furniture's model loads, the model takes its place. It's built in the same coordinates, so it drops in at
 // the parent's origin. Until then the code-built version shows, kept out of the static merge so it can go.
 const PIECES = new Map();
+
 function piece(name, parent, build) {
   const before = new Set(parent.children);
   build();
@@ -146,18 +174,22 @@ piece('bookshelf', LEFT, () => {
   g.add(mesh(box(0.12, 3.5, 3.1), '#c99a74', { x: -0.42, y: 1.75 }));
   [-1, 1].forEach(sd => g.add(mesh(box(0.95, 3.5, 0.14), '#e2b088', { y: 1.75, z: sd * 1.48 })));
   g.add(mesh(box(1.0, 0.14, 3.15), '#e2b088', { y: 3.47 }));
+
   for (let s = 0; s < 4; s++) {
     const y0 = 0.3 + s * 0.8;
     g.add(mesh(box(0.92, 0.08, 2.9), '#d8a77d', { x: 0.03, y: y0 }));
     let z = -1.3;
+
     while (z < 1.25) {
       const w = 0.14 + rand() * 0.12, h = 0.42 + rand() * 0.22;
       if (rand() > 0.12) g.add(mesh(box(0.55, h, w), BOOKS[Math.floor(rand() * BOOKS.length)], { x: 0.1, y: y0 + 0.04 + h / 2, z: z + w / 2, rx: rand() > 0.9 ? 0.15 : 0 }));
       z += w + 0.02;
     }
   }
+
   LEFT.add(g);
 });
+
 // whiteboard on the back wall
 piece('whiteboard', LEFT, () => {
   LEFT.add(mesh(box(3.3, 2.0, 0.12), '#d7d9e3', { x: -3, y: 2.5, z: -6.92 }));
@@ -168,8 +200,10 @@ piece('whiteboard', LEFT, () => {
   [0.25, 0.45, 0.35].forEach((h, i) => LEFT.add(mesh(box(0.18, h, 0.02), '#9fd49a', { x: -3.9 + i * 0.28, y: 1.85 + h / 2, z: -6.8, cast: false })));
   LEFT.add(mesh(box(2.6, 0.08, 0.18), '#c7c9d3', { x: -3, y: 1.48, z: -6.82 }));
 });
+
 // window + router table
 let skyMat, sunMoon;
+
 {
   scene.add(mesh(box(2.7, 2.1, 0.16), '#ffffff', { x: 2.6, y: 2.75, z: -6.92 }));
   skyMat = new THREE.MeshBasicMaterial({ color: '#9fd8ff' });
@@ -181,34 +215,43 @@ let skyMat, sunMoon;
   scene.add(mesh(box(2.35, 0.08, 0.08), '#ffffff', { x: 2.6, y: 2.75, z: -6.8, cast: false }));
   scene.add(mesh(box(3.0, 0.12, 0.45), '#fff4ea', { x: 2.6, y: 1.65, z: -6.75 }));
   [-0.55, 0.55].forEach(dx => scene.add(mesh(box(0.9, 1.9, 0.06), '#ffc4d6', { x: 2.6 + dx * 2.9, y: 2.75, z: -6.78, cast: false })));
+
   piece('routertable', scene, () => {
     scene.add(mesh(box(2.0, 0.1, 0.95), '#d8a77d', { x: 2.6, y: 1.0, z: -6.3 }));
     [[-0.9, -0.38], [0.9, -0.38], [-0.9, 0.38], [0.9, 0.38]].forEach(([dx, dz]) => scene.add(mesh(box(0.08, 0.95, 0.08), '#b88a62', { x: 2.6 + dx, y: 0.5, z: -6.3 + dz })));
     scene.add(mesh(box(0.85, 0.2, 0.5), '#b5ccff', { x: 2.6, y: 1.15, z: -6.35 }));
     [-0.3, 0.3].forEach(dx => scene.add(mesh(cyl(0.025, 0.025, 0.55, 6), '#6f7aa0', { x: 2.6 + dx, y: 1.5, z: -6.5, rz: dx * 0.6 })));
   });
+
   const leds = [0, 1, 2, 3].map(i => { const m = new THREE.Mesh(sph(0.04, 8), new THREE.MeshBasicMaterial({ color: '#7cff9a' })); m.position.set(2.35 + i * 0.16, 1.17, -6.09); scene.add(m); return m; });
   animated.push(t => leds.forEach((m, i) => m.material.color.set((Math.floor(t / 250) + i) % 3 ? (i % 2 ? '#ffe08a' : '#7cff9a') : '#3b4566')));
 }
+
 // server rack in the back-right corner
 {
   piece('serverrack', scene, () => {
     scene.add(mesh(box(1.3, 3.3, 1.15), '#9a94c2', { x: 5.9, y: 1.65, z: -6.1 }));
+
     for (let i = 0; i < 6; i++) {
       scene.add(mesh(box(1.05, 0.36, 0.03), '#6f6a9c', { x: 5.9, y: 0.45 + i * 0.47, z: -5.52, cast: false }));
       scene.add(mesh(box(0.45, 0.04, 0.02), '#b3aed6', { x: 5.7, y: 0.45 + i * 0.47, z: -5.5, cast: false }));
     }
   });
+
   const lights = [];
+
   for (let i = 0; i < 6; i++) {
     [0, 1].forEach(k => { const m = new THREE.Mesh(sph(0.04, 8), new THREE.MeshBasicMaterial({ color: '#7cff9a' })); m.position.set(6.2 + k * 0.13, 0.45 + i * 0.47, -5.49); scene.add(m); lights.push(m); });
   }
+
   animated.push(t => lights.forEach((m, i) => m.material.color.set(i % 2 ? (Math.sin(t / 90 + i) > 0.6 ? '#ff7a7a' : '#5a2a3a') : (Math.sin(t / 180 + i * 1.7) > 0 ? '#7cff9a' : '#245a35'))));
   const L = new THREE.PointLight(0x9fffc0, 0, 4, 2); L.position.set(5.9, 1.5, -4.9); scene.add(L); lampLights.push(L);
 }
+
 // desk, laptop and stool
 {
   const D = { x: 2.4, z: -0.6 };
+
   piece('desk', scene, () => {
     scene.add(mesh(box(3.0, 0.14, 1.35), '#e2b088', { x: D.x, y: 1.1, z: D.z }));
     [[-1.35, -0.55], [1.35, -0.55], [-1.35, 0.55], [1.35, 0.55]].forEach(([dx, dz]) => scene.add(mesh(box(0.1, 1.05, 0.1), '#c4926a', { x: D.x + dx, y: 0.53, z: D.z + dz })));
@@ -223,8 +266,10 @@ let skyMat, sunMoon;
     scene.add(mesh(cyl(0.38, 0.38, 0.12, 18), '#b9a6f5', { x: D.x, y: 0.5, z: -1.85 }));
     scene.add(mesh(cyl(0.06, 0.06, 0.45, 8), '#8a7a80', { x: D.x, y: 0.22, z: -1.85 }));
   });
+
   const L = new THREE.PointLight(0xbfd9ff, 0, 3.5, 2); L.position.set(D.x, 1.7, D.z - 0.6); scene.add(L); lampLights.push(L);
 }
+
 // sofa against the left wall
 piece('sofa', LEFT, () => {
   const z = 2.6;
@@ -235,6 +280,7 @@ piece('sofa', LEFT, () => {
   LEFT.add(mesh(box(0.25, 0.55, 0.6), '#ffe08a', { x: -6.45, y: 1.05, z: z - 1.1, ry: 0.3, rz: 0.15 }));
   [-1.6, 1.6].forEach(dz => LEFT.add(mesh(cyl(0.06, 0.05, 0.12, 8), '#b88a62', { x: -5.6, y: 0.06, z: z + dz })));
 });
+
 // floor lamp, plant, wall clock, heart picture
 {
   piece('floorlamp', LEFT, () => {
@@ -243,6 +289,7 @@ piece('sofa', LEFT, () => {
     LEFT.add(mesh(cyl(0.3, 0.55, 0.6, 20, 1), '', { x: -6.2, y: 2.75, z: 5.3, mat: windowMat }));
     LEFT.add(mesh(sph(0.13, 10), '', { x: -6.2, y: 2.5, z: 5.3, mat: bulbMat, cast: false }));
   });
+
   const L = new THREE.PointLight(0xffc97a, 0, 9, 1.6); L.position.set(-6.0, 2.4, 5.1); LEFT.add(L); lampLights.push(L);
 
   piece('cornerplant', LEFT, () => {
@@ -262,19 +309,23 @@ piece('sofa', LEFT, () => {
   [-0.09, 0.09].forEach(dz => LEFT.add(mesh(sph(0.1, 10), '#ff7b9c', { x: -6.87, y: 3.25, z: -1.1 + dz, cast: false })));
   LEFT.add(mesh(cone(0.14, 0.2, 4), '#ff7b9c', { x: -6.87, y: 3.1, z: -1.1, rx: PI, ry: PI / 4, cast: false }));
 }
+
 // rugs, cat bed, yarn and the bug rug
 {
   scene.add(mesh(cyl(2.4, 2.4, 0.04, 40), '#ffd6e0', { x: 0.2, y: 0.13, z: 2.2, cast: false, recv: true }));
   scene.add(mesh(cyl(1.8, 1.8, 0.045, 40), '#ffe9ef', { x: 0.2, y: 0.135, z: 2.2, cast: false, recv: true }));
+
   piece('catbed', scene, () => {
     scene.add(mesh(new THREE.TorusGeometry(0.55, 0.2, 10, 24), '#c3b6ec', { x: -1.8, y: 0.3, z: 5.6, rx: PI / 2 }));
     scene.add(mesh(cyl(0.55, 0.55, 0.1, 20), '#e6dcff', { x: -1.8, y: 0.17, z: 5.6, cast: false }));
   });
+
   const yarn = mesh(sph(0.22, 12), '#8fc1f0', { x: -0.3, y: 0.33, z: 6.1 });
   scene.add(yarn); animated.push(t => { yarn.rotation.y = t / 2000; });
 
   scene.add(mesh(cyl(1.9, 1.9, 0.05, 36), '#f07878', { x: 4.6, y: 0.14, z: 4.6, cast: false, recv: true }));
   scene.add(mesh(cyl(1.6, 1.6, 0.055, 36), '#f8a0a0', { x: 4.6, y: 0.145, z: 4.6, cast: false, recv: true }));
+
   for (let i = 0; i < 3; i++) {
     const bug = new THREE.Group();
     bug.add(mesh(sph(0.13, 10), '#5a3d4a', { s: [1, 0.6, 1.3] }));
@@ -283,13 +334,16 @@ piece('sofa', LEFT, () => {
     animated.push(t => { const a = t / (1100 + i * 350) + i * 2.1, r = 1.25 - i * 0.2; bug.position.set(4.6 + Math.cos(a) * r, 0.22, 4.6 + Math.sin(a) * r); bug.rotation.y = -a; });
   }
 }
+
 // ---------- kitchen (back right) ----------
 {
   for (let i = 0; i < 8; i++) for (let j = 0; j < 7; j++)
     EAST.add(mesh(box(0.92, 0.02, 0.92), (i + j) % 2 ? '#e3f5ee' : '#ffffff', { x: 7.6 + 0.5 + i * 0.925, y: 0.13, z: -6.5 + j * 0.925, cast: false, recv: true }));
+
   // mint tiles behind the counter
   for (let i = 0; i < 12; i++) for (let j = 0; j < 4; j++)
     EAST.add(mesh(box(0.38, 0.38, 0.02), (i + j) % 2 ? '#c9eedf' : '#e9faf3', { x: 8.0 + i * 0.4, y: 1.35 + j * 0.4, z: -6.98, cast: false }));
+
   piece('kitchen', EAST, () => {
     EAST.add(mesh(box(5.0, 1.05, 1.0), '#fff6ef', { x: 10.5, y: 0.6, z: -6.45 }));
     EAST.add(mesh(box(5.1, 0.1, 1.08), '#f7c6d4', { x: 10.5, y: 1.15, z: -6.43 }));
@@ -303,19 +357,23 @@ piece('sofa', LEFT, () => {
     EAST.add(mesh(cyl(0.25, 0.22, 0.32, 18), '#ff9fb5', { x: 11.3, y: 1.4, z: -6.4 }));
     EAST.add(mesh(cyl(0.26, 0.26, 0.04, 18), '#ffc4d6', { x: 11.3, y: 1.58, z: -6.4 }));
   });
+
   for (let i = 0; i < 3; i++) {
     const puff = new THREE.Mesh(sph(0.1, 10), new THREE.MeshLambertMaterial({ color: '#ffffff', transparent: true }));
     EAST.add(puff);
     animated.push(t => { const k = ((t / 1800) + i / 3) % 1; puff.position.set(11.3 + Math.sin(k * 5 + i) * 0.1, 1.7 + k * 1.1, -6.4); puff.scale.setScalar(0.6 + k); puff.material.opacity = 0.8 * (1 - k); });
   }
+
   // shelf with jars
   piece('kitchen', EAST, () => {
     EAST.add(mesh(box(2.4, 0.08, 0.35), '#e2b088', { x: 10.2, y: 3.2, z: -6.8 }));
+
     ['#ffd27a', '#9fd49a', '#ff9fb5', '#8fc1f0'].forEach((c, i) => {
       EAST.add(mesh(cyl(0.13, 0.13, 0.32, 12), c, { x: 9.3 + i * 0.6, y: 3.4, z: -6.8 }));
       EAST.add(mesh(cyl(0.14, 0.14, 0.06, 12), '#ffffff', { x: 9.3 + i * 0.6, y: 3.59, z: -6.8 }));
     });
   });
+
   // fridge with a heart magnet
   piece('fridge', EAST, () => {
     EAST.add(mesh(box(1.35, 3.0, 1.1), '#c9ecdf', { x: 14.0, y: 1.6, z: -6.35 }));
@@ -324,39 +382,48 @@ piece('sofa', LEFT, () => {
     [-0.05, 0.05].forEach(dx => EAST.add(mesh(sph(0.06, 8), '#ff7b9c', { x: 14.2 + dx, y: 2.62, z: -5.78, cast: false })));
     EAST.add(mesh(cone(0.08, 0.1, 4), '#ff7b9c', { x: 14.2, y: 2.55, z: -5.78, rx: PI, ry: PI / 4, cast: false }));
   });
+
   // little round table with two stools and donuts
   piece('diningtable', EAST, () => {
     EAST.add(mesh(cyl(0.95, 0.95, 0.1, 28), '#fff6ef', { x: 10.5, y: 1.0, z: -2.6 }));
     EAST.add(mesh(cyl(0.08, 0.1, 0.95, 10), '#e2b088', { x: 10.5, y: 0.5, z: -2.6 }));
     EAST.add(mesh(cyl(0.45, 0.5, 0.06, 18), '#e2b088', { x: 10.5, y: 0.08, z: -2.6 }));
+
     [9.45, 11.55].forEach(x => {
       EAST.add(mesh(cyl(0.34, 0.34, 0.12, 18), '#ffd27a', { x, y: 0.5, z: -2.6 }));
       EAST.add(mesh(cyl(0.05, 0.05, 0.44, 8), '#e2b088', { x, y: 0.22, z: -2.6 }));
     });
+
     EAST.add(mesh(cyl(0.3, 0.26, 0.04, 18), '#ffffff', { x: 10.5, y: 1.07, z: -2.6 }));
   });
+
   // a plate of warm mini pretzels
   [[-0.09, 0.02, 0.4], [0.1, -0.06, -0.5]].forEach(([dx, dz, ry]) => {
     const p = makePretzel(); p.scale.setScalar(0.16); p.position.set(10.5 + dx, 1.12, -2.6 + dz); p.rotation.set(-PI / 2, 0, ry); EAST.add(p);
   });
+
   // pendant lamp over the table
   piece('diningtable', EAST, () => {
     EAST.add(mesh(cyl(0.01, 0.01, 1.4, 4), '#8a7a80', { x: 10.5, y: 3.9, z: -2.6, cast: false }));
     EAST.add(mesh(cone(0.4, 0.35, 18, 1, true), '#ffc4d6', { x: 10.5, y: 3.05, z: -2.6, cast: false }));
     EAST.add(mesh(sph(0.12, 10), '', { x: 10.5, y: 2.9, z: -2.6, mat: bulbMat, cast: false }));
   });
+
   const L = new THREE.PointLight(0xffc97a, 0, 6, 1.8); L.position.set(10.5, 2.7, -2.6); EAST.add(L); lampLights.push(L);
 }
+
 // ---------- bathroom (front right, behind a low wall) ----------
 {
   for (let i = 0; i < 7; i++) for (let j = 0; j < 6; j++)
     EAST.add(mesh(box(0.9, 0.02, 0.9), (i + j) % 2 ? '#dcecfb' : '#f4f9ff', { x: 9.15 + i * 0.92, y: 0.13, z: 1.55 + j * 0.92, cast: false, recv: true }));
+
   const WALL = '#dcefec', H = 2.1;
   EAST.add(mesh(box(6.4, H, 0.2), WALL, { x: 11.8, y: H / 2, z: 1.0 }));
   EAST.add(mesh(box(0.2, H, 2.1), WALL, { x: 8.6, y: H / 2, z: 2.05 }));
   EAST.add(mesh(box(0.2, H, 2.3), WALL, { x: 8.6, y: H / 2, z: 5.85 }));
   EAST.add(mesh(box(6.5, 0.1, 0.3), '#c3e3dd', { x: 11.8, y: H + 0.05, z: 1.0 }));
   [[8.6, 2.05, 2.1], [8.6, 5.85, 2.3]].forEach(([x, z, d]) => EAST.add(mesh(box(0.3, 0.1, d + 0.05), '#c3e3dd', { x, y: H + 0.05, z })));
+
   // bathtub full of bubbles, with a rubber duck
   piece('bathtub', EAST, () => {
     EAST.add(mesh(box(3.0, 0.22, 1.6), '#fffaf6', { x: 12.6, y: 0.22, z: 5.2 }));
@@ -366,12 +433,15 @@ piece('sofa', LEFT, () => {
     [[-1.35, -0.65], [1.35, -0.65], [-1.35, 0.65], [1.35, 0.65]].forEach(([dx, dz]) => EAST.add(mesh(sph(0.08, 8), '#ffd27a', { x: 12.6 + dx, y: 0.1, z: 5.2 + dz })));
     EAST.add(mesh(cyl(0.04, 0.04, 0.5, 8), '#c7ccd8', { x: 14.0, y: 1.15, z: 5.2 }));
   });
+
   const bub = rng(3);
+
   for (let i = 0; i < 26; i++) {
     const b = mesh(sph(0.1 + bub() * 0.12, 10), '#ffffff', { cast: false });
     const bx = 11.4 + bub() * 2.4, bz = 4.6 + bub() * 1.2, ph = bub() * 6;
     EAST.add(b); animated.push(t => b.position.set(bx, 0.76 + Math.sin(t / 700 + ph) * 0.04, bz));
   }
+
   const duck = new THREE.Group();
   duck.add(mesh(sph(0.16, 12), '#ffd23f', { s: [1.2, 0.8, 1] }));
   duck.add(mesh(sph(0.1, 10), '#ffd23f', { x: 0.1, y: 0.15 }));
@@ -380,12 +450,14 @@ piece('sofa', LEFT, () => {
   piece('bathtub', EAST, () => {
     EAST.add(mesh(box(1.4, 0.03, 0.8), '#ffc4d6', { x: 12.4, y: 0.15, z: 6.5, cast: false }));
   });
+
   // toilet
   piece('toilet', EAST, () => {
     EAST.add(mesh(box(0.7, 0.8, 0.3), '#ffffff', { x: 14.55, y: 0.9, z: 2.1, ry: PI / 2 }));
     EAST.add(mesh(cyl(0.3, 0.22, 0.45, 18), '#ffffff', { x: 14.15, y: 0.35, z: 2.1 }));
     EAST.add(mesh(cyl(0.33, 0.33, 0.06, 18), '#ffc4d6', { x: 14.15, y: 0.6, z: 2.1 }));
   });
+
   // sink with a round mirror on the low wall
   piece('washbasin', EAST, () => {
     EAST.add(mesh(cyl(0.1, 0.14, 0.75, 12), '#ffffff', { x: 10.6, y: 0.48, z: 1.45 }));
@@ -416,6 +488,7 @@ piece('sofa', LEFT, () => {
   [[-2.3, 9.8], [-0.9, 10.9], [-1.4, 9.4], [-2.0, 11.2]].forEach(([x, z]) => LEFT.add(mesh(cone(0.16, 0.02, 5), '#fff1b0', { x, y: 0.16, z, cast: false })));
   // the bed, headboard against the wall
   const B = { x: -5.3, z: 10.4 };
+
   piece('bed', LEFT, () => {
     LEFT.add(mesh(box(3.3, 0.45, 2.5), '#e2b088', { x: B.x, y: 0.35, z: B.z }));
     LEFT.add(mesh(box(0.25, 1.6, 2.6), '#e2b088', { x: -6.85, y: 0.9, z: B.z }));
@@ -426,6 +499,7 @@ piece('sofa', LEFT, () => {
     for (let i = 0; i < 6; i++) LEFT.add(mesh(sph(0.07, 8), '#ffffff', { x: B.x + 0.0 + (i % 3) * 0.6, y: 0.97, z: B.z - 0.6 + Math.floor(i / 3) * 1.2, s: [1, 0.4, 1], cast: false }));
     [-0.6, 0.6].forEach(dz => LEFT.add(mesh(sph(0.42, 14), '#fff6fa', { x: -6.3, y: 1.05, z: B.z + dz, s: [0.8, 0.45, 1.25] })));
   });
+
   // plush bear on the pillow
   piece('bed', LEFT, () => {
     const plush = new THREE.Group(); plush.position.set(-6.2, 1.3, B.z + 1.05); plush.rotation.y = PI / 2;
@@ -435,37 +509,44 @@ piece('sofa', LEFT, () => {
     plush.add(mesh(sph(0.05, 8), '#fff4e0', { y: 0.14, z: 0.11 }));
     LEFT.add(plush);
   });
+
   // nightstand with a moon lamp
   piece('nightstand', LEFT, () => {
     LEFT.add(mesh(box(0.9, 0.8, 0.8), '#fff6ef', { x: -6.45, y: 0.45, z: 12.4 }));
     LEFT.add(mesh(box(0.7, 0.04, 0.04), '#d9a0b0', { x: -6.45, y: 0.55, z: 12.82, cast: false }));
     LEFT.add(mesh(sph(0.22, 16), '', { x: -6.45, y: 1.1, z: 12.4, mat: windowMat }));
   });
+
   const L = new THREE.PointLight(0xffd9a0, 0, 6, 1.8); L.position.set(-6.0, 1.5, 12.0); LEFT.add(L); lampLights.push(L);
   // window above the bed, sharing the sky colour with the living room window
   LEFT.add(mesh(box(0.16, 1.5, 2.0), '#ffffff', { x: -6.92, y: 3.0, z: B.z }));
   LEFT.add(mesh(box(0.04, 1.25, 1.75), '', { x: -6.84, y: 3.0, z: B.z, mat: skyMat, cast: false }));
   LEFT.add(mesh(box(0.06, 1.25, 0.06), '#ffffff', { x: -6.8, y: 3.0, z: B.z, cast: false }));
+
   // wardrobe and slippers
   piece('wardrobe', LEFT, () => {
     LEFT.add(mesh(box(1.0, 2.6, 1.8), '#fde4d4', { x: -6.4, y: 1.4, z: 8.3 }));
     LEFT.add(mesh(box(0.03, 2.3, 0.02), '#e9bfa8', { x: -5.89, y: 1.45, z: 8.3, cast: false }));
     [-0.15, 0.15].forEach(dz => LEFT.add(mesh(sph(0.05, 8), '#ffffff', { x: -5.86, y: 1.5, z: 8.3 + dz, cast: false })));
   });
+
   [-0.18, 0.18].forEach(dz => LEFT.add(mesh(sph(0.14, 10), '#ffc4d6', { x: -3.4, y: 0.17, z: 11.3 + dz, s: [1.6, 0.5, 0.8] })));
   // a little star mobile that slowly turns
   const mobile = new THREE.Group(); mobile.position.set(-4.4, 2.9, B.z); LEFT.add(mobile);
   mobile.add(mesh(cyl(0.01, 0.01, 1.2, 4), '#8a7a80', { rz: PI / 2, cast: false }));
+
   [-0.55, 0, 0.55].forEach((x, i) => {
     mobile.add(mesh(cyl(0.005, 0.005, 0.35, 4), '#8a7a80', { x, y: -0.18, cast: false }));
     mobile.add(mesh(cone(0.12, 0.05, 5), i === 1 ? '#fff1b0' : '#ffc4d6', { x, y: -0.38, rx: PI / 2, cast: false }));
   });
+
   animated.push(t => { mobile.rotation.y = Math.sin(t / 3000) * 0.5; });
 }
 
 // ---------- plant balcony (front right, in front of the bathroom) ----------
 {
   for (let i = 0; i < 8; i++) scene.add(mesh(box(0.95, 0.12, 4.3), i % 2 ? '#e3c3a2' : '#d9b48e', { x: 6.5 + i * 0.975, y: 0.06, z: 9.25, cast: false, recv: true }));
+
   // low planter boxes between the bathroom and the balcony, so the bathroom stays in view
   piece('planters', scene, () => {
     for (let i = 0; i < 4; i++) {
@@ -476,12 +557,14 @@ piece('sofa', LEFT, () => {
       [-0.35, 0.3].forEach((dx, k) => scene.add(mesh(sph(0.07, 8), ['#ff9fb5', '#ffd27a', '#c3a3f0', '#ffffff'][(i + k) % 4], { x: x + dx, y: 0.86, z: 7.25, cast: false })));
     }
   });
+
   // white railing along the open sides, with fairy lights that glow at night
   const rail = (x, z, w, d) => scene.add(mesh(box(w, 0.08, d), '#ffffff', { x, y: 0.95, z }));
   rail(9.9, 11.45, 7.8, 0.1); rail(13.75, 9.3, 0.1, 4.3);
   for (let x = 6.1; x <= 13.8; x += 0.55) scene.add(mesh(box(0.07, 0.85, 0.07), '#ffffff', { x, y: 0.5, z: 11.45 }));
   for (let z = 7.6; z < 11.4; z += 0.55) scene.add(mesh(box(0.07, 0.85, 0.07), '#ffffff', { x: 13.75, y: 0.5, z }));
   for (let i = 0; i < 16; i++) scene.add(mesh(sph(0.055, 8), '', { x: 6.3 + i * 0.47, y: 1.05 - Math.abs(Math.sin(i * 0.9)) * 0.08, z: 11.5, mat: bulbMat, cast: false }));
+
   // a big leafy plant in the corner, a little lemon tree and some small pots
   piece('balconyplants', scene, () => {
     scene.add(mesh(cyl(0.42, 0.32, 0.7, 16), '#f49a91', { x: 13.1, y: 0.4, z: 10.8 }));
@@ -490,11 +573,13 @@ piece('sofa', LEFT, () => {
     scene.add(mesh(cyl(0.04, 0.05, 0.6, 6), '#b88a62', { x: 6.7, y: 0.8, z: 10.9 }));
     scene.add(mesh(sph(0.45, 14), '#9fd49a', { x: 6.7, y: 1.3, z: 10.9 }));
     [[6.45, 1.2, 11.2], [6.95, 1.45, 10.95], [6.6, 1.55, 10.6], [6.9, 1.1, 10.6]].forEach(([x, y, z]) => scene.add(mesh(sph(0.08, 8), '#ffd23f', { x, y, z, cast: false })));
+
     [[8.0, 11.05, '#ffc4d6'], [12.0, 11.05, '#b5ccff'], [13.3, 8.0, '#ffd27a']].forEach(([x, z, c]) => {
       scene.add(mesh(cyl(0.18, 0.14, 0.3, 12), c, { x, y: 0.27, z }));
       scene.add(mesh(sph(0.22, 10), '#8ccf8a', { x, y: 0.55, z }));
     });
   });
+
   // two squishy bean bags and a little table with mugs
   piece('beanbags', scene, () => {
     [[9.2, '#ffc4d6'], [10.8, '#b5ccff']].forEach(([x, c]) => scene.add(mesh(sph(0.55, 18), c, { x, y: 0.3, z: 9.7, s: [1.1, 0.55, 1.1] })));
@@ -502,11 +587,13 @@ piece('sofa', LEFT, () => {
     scene.add(mesh(cyl(0.05, 0.07, 0.4, 8), '#e2b088', { x: 10.0, y: 0.28, z: 10.5 }));
     [[-0.1, '#ff9fb5'], [0.12, '#8fc1f0']].forEach(([dx, c]) => scene.add(mesh(cyl(0.06, 0.05, 0.12, 10), c, { x: 10.0 + dx, y: 0.59, z: 10.5 })));
   });
+
   // watering can
   piece('balconyplants', scene, () => {
     scene.add(mesh(cyl(0.16, 0.18, 0.28, 12), '#9fdcc8', { x: 12.7, y: 0.26, z: 8.0 }));
     scene.add(mesh(cyl(0.025, 0.035, 0.35, 6), '#9fdcc8', { x: 12.5, y: 0.38, z: 8.0, rz: 0.9 }));
   });
+
   // rain over the balcony
   const N = 120, pos = new Float32Array(N * 6), geo = new THREE.BufferGeometry();
   geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
@@ -514,6 +601,7 @@ piece('sofa', LEFT, () => {
   const lines = new THREE.LineSegments(geo, mat); lines.frustumCulled = false; scene.add(lines);
   const drops = Array.from({ length: N }, () => [6.2 + rand() * 7.4, rand() * 5, 7.6 + rand() * 3.8]);
   let last = 0;
+
   animated.push(t => {
     const dt = Math.min(0.05, (t - last) / 1000); last = t;
     lines.visible = !!(window.isRaining && isRaining());
@@ -531,6 +619,7 @@ PIECES.forEach(({ parent, built }, name) => loadModel(name, () => {
 
 // ---------- the whole home sits on its own little floating island, with a garden round the edge ----------
 const ISLAND = { x: 4.3, z: 2.75, hw: 11.2, hd: 11.45 };
+
 {
   const isl = makeFloatingIsland({ hw: ISLAND.hw, hd: ISLAND.hd, r: 2.2, depth: 15, seed: 21 });
   isl.position.set(ISLAND.x, 0, ISLAND.z); scene.add(isl);
@@ -539,24 +628,29 @@ const ISLAND = { x: 4.3, z: 2.75, hw: 11.2, hd: 11.45 };
   const onIsland = (x, z, m) => Math.abs(x - ISLAND.x) < ISLAND.hw - m && Math.abs(z - ISLAND.z) < ISLAND.hd - m;
   const gr = rng(77), spot = m => { for (let k = 0; k < 80; k++) { const x = ISLAND.x + (gr() * 2 - 1) * ISLAND.hw, z = ISLAND.z + (gr() * 2 - 1) * ISLAND.hd; if (onIsland(x, z, m) && !indoors(x, z)) return [x, z]; } return null; };
   for (let i = 0; i < 90; i++) { const p = spot(0.35); if (p) scene.add(mesh(sph(0.07, 6), ['#ff9fb5', '#ffffff', '#ffd27a', '#c3a3f0'][i % 4], { x: p[0], y: 0.1, z: p[1], cast: false })); }
+
   for (let i = 0; i < 12; i++) {
     const p = spot(0.6); if (!p) continue;
     const b = new THREE.Group(); b.position.set(p[0], 0.05, p[1]); b.scale.setScalar(0.7 + gr() * 0.4); scene.add(b);
     [[0, 0.3, 0, 0.36], [0.25, 0.24, 0.1, 0.26], [-0.22, 0.22, -0.05, 0.25]].forEach(([dx, y, dz, r], k) => b.add(mesh(sph(r, 12), k ? '#8cc786' : '#9fd49a', { x: dx, y, z: dz })));
     if (i % 2) [[0.1, 0.55, 0.2], [-0.2, 0.42, 0.18], [0.3, 0.38, -0.1]].forEach(([dx, y, dz]) => b.add(mesh(sph(0.05, 6), '#ffb3c8', { x: dx, y, z: dz, cast: false })));
   }
+
   // the front-right corner garden: a blossom tree, toadstools and a lamp
   const tree = new THREE.Group(); tree.position.set(13.4, 0.05, 12.9); scene.add(tree);
   tree.add(mesh(cyl(0.14, 0.2, 1.3, 8), '#c9a27e', { y: 0.65 }));
   [[0, 1.65, 0, 0.75], [0.45, 1.5, 0.2, 0.5], [-0.4, 1.45, -0.1, 0.52], [0.1, 2.1, -0.1, 0.5]].forEach(([dx, y, dz, r]) => tree.add(mesh(sph(r, 14), '#ffc4d6', { x: dx, y, z: dz })));
+
   [[8.3, 13.1, 0.9], [8.9, 13.5, 0.6], [11.2, 13.3, 0.75]].forEach(([x, z, sc]) => {
     scene.add(mesh(cyl(0.09 * sc, 0.12 * sc, 0.35 * sc, 10), '#fff6e8', { x, y: 0.05 + 0.17 * sc, z }));
     scene.add(mesh(new THREE.SphereGeometry(0.3 * sc, 16, 8, 0, PI * 2, 0, PI / 2), '#ff8fab', { x, y: 0.05 + 0.33 * sc, z }));
     scene.add(mesh(sph(0.05 * sc, 6), '#ffffff', { x: x + 0.1 * sc, y: 0.05 + 0.55 * sc, z: z + 0.1 * sc, cast: false }));
   });
+
   scene.add(mesh(cyl(0.05, 0.07, 1.6, 8), '#8a7a80', { x: 15.0, y: 0.85, z: 8.5 }));
   scene.add(mesh(sph(0.18, 12), '', { x: 15.0, y: 1.72, z: 8.5, mat: bulbMat }));
   const L = new THREE.PointLight(0xffc97a, 0, 5, 2); L.position.set(15.0, 1.8, 8.5); scene.add(L); lampLights.push(L);
+
   // little lanterns hanging under the rim on chains, swaying a little
   [[15.55, -2.0], [15.55, 5.5], [9.5, 14.25], [0.5, 14.25], [-4.5, 14.25]].forEach(([x, z], i) => {
     const l = new THREE.Group(); l.position.set(x, -0.3, z); scene.add(l);
@@ -568,6 +662,7 @@ const ISLAND = { x: 4.3, z: 2.75, hw: 11.2, hd: 11.45 };
     animated.push(t => { l.rotation.z = Math.sin(t / 1300 + i) * 0.08; l.rotation.x = Math.cos(t / 1700 + i) * 0.06; });
   });
 }
+
 // a pink neon 🥨 glowing on the wall above the sofa
 {
   const neon = makePretzel({ salt: false, material: new THREE.MeshBasicMaterial({ color: '#ff8fbd' }) });
@@ -575,16 +670,20 @@ const ISLAND = { x: 4.3, z: 2.75, hw: 11.2, hd: 11.45 };
   const L = new THREE.PointLight(0xff8fbd, 0.25, 4, 2); L.position.set(-6.3, 3.3, 2.6); LEFT.add(L);
   animated.push(t => { L.intensity = 0.25 + darkness(hourNow()) * 0.6 + Math.sin(t / 400) * 0.03; });
 }
+
 // little clouds drift past the windows
 {
   const cloudMat = new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0 });
+
   [[scene, 2.6, 2.75, -6.825, 2.0, 'x', 0], [scene, 2.6, 3.15, -6.825, 2.0, 'x', 0.55], [LEFT, -6.825, 3.05, 10.4, 1.4, 'z', 0.3]].forEach(([parent, cx, cy, cz, w, along, ph]) => {
     const c = new THREE.Group(); parent.add(c);
+
     [[0, 0, 0.13], [0.13, -0.02, 0.1], [-0.13, -0.02, 0.1], [0.05, 0.08, 0.09]].forEach(([dx, dy, r]) => {
       const m = new THREE.Mesh(new THREE.CircleGeometry(r, 14), cloudMat); m.position.set(along === 'x' ? dx : 0, dy, along === 'x' ? 0 : dx);
       if (along === 'z') m.rotation.y = PI / 2;
       c.add(m);
     });
+
     animated.push(t => {
       const k = (t / 22000 + ph) % 1, u = (k - 0.5) * w;
       c.position.set(along === 'x' ? cx + u : cx, cy, along === 'x' ? cz : cz - u);
@@ -598,6 +697,7 @@ const ISLAND = { x: 4.3, z: 2.75, hw: 11.2, hd: 11.45 };
 const WET_SKY = new THREE.Color('#9aa0b4'), WET_NIGHT = new THREE.Color('#1c1f36');
 const streakMat = new THREE.MeshBasicMaterial({ color: '#e8f4ff', transparent: true, opacity: 0.8 });
 const streaks = [];
+
 [[scene, 2.6, 2.75, -6.815, 2.2, 1.65, 'x'], [LEFT, -6.815, 3.0, 10.4, 1.6, 1.1, 'z']].forEach(([parent, cx, cy, cz, w, h, along]) => {
   for (let i = 0; i < 12; i++) {
     const m = new THREE.Mesh(box(along === 'x' ? 0.025 : 0.01, 0.16, along === 'x' ? 0.01 : 0.025), streakMat);
@@ -605,11 +705,13 @@ const streaks = [];
     parent.add(m); streaks.push(m);
   }
 });
+
 animated.push(t => {
   const dk = darkness(hourNow()), wet = window.wetness ? wetness() : 0, raining = window.isRaining && isRaining();
   skyMat.color.set(dk > 0.6 ? '#22285a' : dk > 0.1 ? '#ffae80' : '#9fd8ff').lerp(dk > 0.6 ? WET_NIGHT : WET_SKY, wet * 0.75);
   sunMoon.material.color.set(dk > 0.6 ? '#fff6c8' : '#ffe08a');
   sunMoon.visible = wet < 0.7;
+
   streaks.forEach(m => {
     const d = m.userData; m.visible = raining;
     if (!raining) return;
@@ -621,6 +723,7 @@ animated.push(t => {
 // ---------- characters ----------
 const CAT_SCALE = 1.3;
 const COLORS = ['#f7a072', '#9ad1d4', '#c3a3f0', '#f6d06f', '#a8d8a0', '#f49ac1', '#8fb3ff', '#ffb38a'];
+
 const SPECIES = {
   cat:     { emoji: '🐱', name: 'Kitty' },
   bunny:   { emoji: '🐰', name: 'Bunny' },
@@ -630,6 +733,7 @@ const SPECIES = {
   penguin: { emoji: '🐧', name: 'Penguin' },
   miw:     { emoji: '👧', name: 'Miw' },
 };
+
 // Miw: a little girl with orange braids, pink glasses and a yellow polka-dot dress
 function makeMiw() {
   const SKIN = '#ffd9c4', HAIR = '#d2541c', HAIR_DK = '#a83f12', DRESS = '#ffd23f', BOOT = '#f2a33a', PINK = '#ff6fae';
@@ -639,17 +743,21 @@ function makeMiw() {
   body.add(mesh(cyl(0.15, 0.37, 0.52, 24), DRESS, { y: 0.44 }));
   body.add(mesh(sph(0.16, 16), DRESS, { y: 0.7, s: [1, 0.5, 0.9] }));
   const dots = rng(7);
+
   for (let i = 0; i < 30; i++) {
     const a = dots() * PI * 2, k = 0.08 + dots() * 0.84, y = 0.18 + k * 0.5, r = 0.37 - k * 0.22 + 0.006;
     body.add(mesh(sph(0.02, 6), '#ffffff', { x: Math.sin(a) * r, y, z: Math.cos(a) * r, cast: false }));
   }
+
   body.add(mesh(sph(0.045, 10), '#ffffff', { y: 0.62, z: 0.16, s: [1, 0.9, 0.5], cast: false }));
   [-1, 1].forEach(sd => body.add(mesh(sph(0.018, 6), '#ffffff', { x: sd * 0.018, y: 0.665, z: 0.155, s: [0.7, 1.6, 0.6], cast: false })));
+
   // arms reaching out a little, like in the picture
   [-1, 1].forEach(sd => {
     body.add(mesh(cyl(0.045, 0.05, 0.36, 10), SKIN, { x: sd * 0.25, y: 0.56, rz: sd * 0.95 }));
     body.add(mesh(sph(0.06, 10), SKIN, { x: sd * 0.4, y: 0.45 }));
   });
+
   // head
   const head = new THREE.Group(); head.position.y = 0.98; body.add(head);
   head.scale.setScalar(1.12);
@@ -658,6 +766,7 @@ function makeMiw() {
   head.add(mesh(sph(0.37, 24), HAIR, { y: 0.03, z: -0.09 }));
   head.add(mesh(new THREE.SphereGeometry(0.4, 28, 16, 0, PI * 2, 0, PI * 0.4), HAIR, { y: 0.03, z: -0.03, rx: 0.05, cast: false }));
   [[-0.21, 0.2], [-0.07, 0.24], [0.07, 0.24], [0.21, 0.2]].forEach(([x, y], i) => head.add(mesh(sph(0.1, 10), i % 2 ? HAIR : HAIR_DK, { x, y, z: 0.26, s: [1, 0.6, 0.45], cast: false })));
+
   // face: big eyes, pink glasses, blush and an open smile
   [-1, 1].forEach(sd => {
     head.add(mesh(sph(0.058, 12), '#3b1f17', { x: sd * 0.13, y: -0.01, z: 0.32, cast: false }));
@@ -665,19 +774,23 @@ function makeMiw() {
     head.add(mesh(new THREE.TorusGeometry(0.1, 0.018, 8, 24), PINK, { x: sd * 0.13, y: -0.01, z: 0.36, cast: false }));
     head.add(mesh(sph(0.075, 10), '#ff8fae', { x: sd * 0.16, y: -0.1, z: 0.29, s: [1.2, 0.6, 0.4], cast: false }));
   });
+
   head.add(mesh(cyl(0.012, 0.012, 0.07, 6), PINK, { y: 0.0, z: 0.37, rz: PI / 2, cast: false }));
   head.add(mesh(sph(0.055, 12), '#e8506e', { y: -0.15, z: 0.3, s: [1.3, 0.75, 0.6], cast: false }));
   head.add(mesh(sph(0.03, 8), '#ff9fb5', { y: -0.17, z: 0.33, s: [1.2, 0.5, 0.5], cast: false }));
+
   // two braids hanging behind the ears
   [-1, 1].forEach(sd => {
     head.add(mesh(sph(0.045, 8), '#7a2e10', { x: sd * 0.33, y: -0.16, z: -0.06 }));
     [0.1, 0.095, 0.088, 0.078, 0.065].forEach((r, i) => head.add(mesh(sph(r, 12), i % 2 ? HAIR : HAIR_DK, { x: sd * (0.35 + i * 0.012), y: -0.25 - i * 0.12, z: -0.07, s: [1, 1.15, 1] })));
     head.add(mesh(cone(0.05, 0.1, 10), HAIR_DK, { x: sd * 0.41, y: -0.88, z: -0.07, rx: PI }));
   });
+
   // braids and hair sway with the head instead of a tail
   const tail = new THREE.Group(); body.add(tail);
   // legs and boots
   [-1, 1].forEach(sd => body.add(mesh(cyl(0.05, 0.05, 0.14, 10), SKIN, { x: sd * 0.11, y: 0.17 })));
+
   const feet = [-1, 1].map(sd => {
     const f = new THREE.Group(); f.position.set(sd * 0.11, 0.07, 0.1);
     f.add(mesh(cyl(0.085, 0.09, 0.14, 14), BOOT, { y: 0.02, z: -0.04 }));
@@ -685,14 +798,17 @@ function makeMiw() {
     f.add(mesh(box(0.17, 0.03, 0.25), '#7a4a2a', { y: -0.06, z: 0.01 }));
     g.add(f); return f;
   });
+
   return { g, body, head, tail, feet };
 }
+
 // each viewer's pick per agent (plus an optional default), shared by the town and the room
 const SPECIES_KEY = 'miw-town-species';
 let speciesStore = {};
 const loadSpecies = () => { try { speciesStore = JSON.parse(localStorage.getItem(SPECIES_KEY) || '{}'); } catch { speciesStore = {}; } };
 const saveSpecies = () => { try { localStorage.setItem(SPECIES_KEY, JSON.stringify(speciesStore)); } catch {} };
 const speciesOf = id => SPECIES[speciesStore[id]] ? speciesStore[id] : SPECIES[speciesStore._default] ? speciesStore._default : 'cat';
+
 loadSpecies();
 
 function makeCharacter(species, color) {
@@ -702,10 +818,12 @@ function makeCharacter(species, color) {
   g.add(body);
   const head = new THREE.Group(); head.position.y = 0.86; body.add(head);
   const tail = new THREE.Group(); tail.position.set(0, 0.25, -0.28); body.add(tail);
+
   const eyes = (y = 0.02, z = 0.29, gap = 0.12, r = 0.05) => [-1, 1].forEach(sd => {
     head.add(mesh(sph(r, 10), '#2b1d16', { x: sd * gap, y, z, cast: false }));
     head.add(mesh(sph(r * 0.36, 6), '#ffffff', { x: sd * gap + 0.015, y: y + 0.02, z: z + r * 0.9, cast: false }));
   });
+
   const cheeks = (y = -0.08, z = 0.25, gap = 0.21) => [-1, 1].forEach(sd => head.add(mesh(sph(0.055, 10), '#ff9bb0', { x: sd * gap, y, z, s: [1, 0.6, 0.5], cast: false })));
   const beak = (y, z) => head.add(mesh(cone(0.065, 0.14, 10), '#ffa94d', { y, z, rx: PI / 2, cast: false }));
   let skin = color, belly = '#fff4e0', foot = color, headShape = [1.08, 0.95, 1], bellyShape = [1, 1, 0.6];
@@ -725,6 +843,7 @@ function makeCharacter(species, color) {
         head.add(mesh(cone(0.12, 0.22, 4), skin, { x: sd * 0.2, y: 0.28, rz: -sd * 0.35, ry: PI / 4 }));
         head.add(mesh(cone(0.06, 0.12, 4), '#ff9bb0', { x: sd * 0.2, y: 0.27, z: 0.04, rz: -sd * 0.35, ry: PI / 4, cast: false }));
       });
+
       eyes(); cheeks();
       head.add(mesh(sph(0.025, 6), '#ff7b9c', { y: -0.06, z: 0.33, cast: false }));
       tail.add(mesh(cyl(0.045, 0.06, 0.5, 8), skin, { y: 0.22, z: -0.08, rx: -0.5 }));
@@ -735,6 +854,7 @@ function makeCharacter(species, color) {
         head.add(mesh(sph(0.1, 12), skin, { x: sd * 0.13, y: 0.45, z: -0.02, rz: -sd * 0.12, s: [0.85, 2.5, 0.6] }));
         head.add(mesh(sph(0.06, 10), '#ffc4d6', { x: sd * 0.13, y: 0.45, z: 0.03, rz: -sd * 0.12, s: [0.8, 2.6, 0.4], cast: false }));
       });
+
       eyes(0.03); cheeks();
       head.add(mesh(sph(0.03, 8), '#ff7b9c', { y: -0.05, z: 0.33, cast: false }));
       tail.add(mesh(sph(0.12, 12), '#ffffff', { y: 0.02, z: -0.04 }));
@@ -744,6 +864,7 @@ function makeCharacter(species, color) {
         head.add(mesh(sph(0.11, 12), skin, { x: sd * 0.25, y: 0.25, s: [1, 1, 0.7] }));
         head.add(mesh(sph(0.06, 10), '#ffc4d6', { x: sd * 0.25, y: 0.25, z: 0.06, s: [1, 1, 0.5], cast: false }));
       });
+
       eyes(0.06, 0.29, 0.13, 0.045); cheeks(-0.06, 0.24, 0.23);
       head.add(mesh(sph(0.13, 12), '#fff4e0', { y: -0.09, z: 0.25, s: [1.2, 0.85, 0.7], cast: false }));
       head.add(mesh(sph(0.04, 8), '#4b3442', { y: -0.04, z: 0.34, s: [1.3, 1, 1], cast: false }));
@@ -756,6 +877,7 @@ function makeCharacter(species, color) {
         head.add(mesh(sph(0.05, 10), '#2b1d16', { x: sd * 0.17, y: 0.24, z: 0.21, cast: false }));
         head.add(mesh(sph(0.018, 6), '#ffffff', { x: sd * 0.17 + 0.015, y: 0.26, z: 0.25, cast: false }));
       });
+
       cheeks(-0.06, 0.27, 0.26);
       head.add(mesh(new THREE.TorusGeometry(0.11, 0.016, 6, 16, PI), '#4b3442', { y: -0.02, z: 0.3, rz: PI, cast: false }));
       break;
@@ -774,12 +896,15 @@ function makeCharacter(species, color) {
       tail.add(mesh(cone(0.08, 0.14, 8), skin, { y: -0.08, z: 0, rx: -2.4 }));
       break;
   }
+
   const feet = [-1, 1].map(sd => {
     const f = mesh(sph(0.1, 10), foot, { x: sd * 0.14, y: 0.07, z: 0.1, s: species === 'chick' || species === 'penguin' || species === 'frog' ? [1.2, 0.6, 1.4] : species === 'bunny' ? [1, 0.75, 1.5] : 1 });
     g.add(f); return f;
   });
+
   return { g, body, head, tail, feet };
 }
+
 function setSpecies(me, species) {
   const old = me.cat, fresh = makeCharacter(species, me.color);
   fresh.g.position.copy(old.g.position); fresh.g.rotation.copy(old.g.rotation); fresh.g.scale.copy(old.g.scale);
@@ -789,18 +914,23 @@ function setSpecies(me, species) {
 
 // ---------- agents ----------
 const agents = new Map();
+
 // swap in each Blender-sculpted character as it arrives
 Object.keys(SPECIES).forEach(sp => loadModel(sp, () => agents.forEach(me => me.species === sp && setSpecies(me, sp))));
+
 const labels = $('labels');
 const XP_KEY = 'agent-town-xp';
 let xpStore = {};
+
 try { xpStore = JSON.parse(localStorage.getItem(XP_KEY) || '{}'); } catch {}
+
 const saveXp = () => { try { localStorage.setItem(XP_KEY, JSON.stringify(xpStore)); } catch {} };
 let colorIdx = 0;
 
 function upsert(a) {
   let me = agents.get(a.id);
   const state = PLACES[a.state] ? a.state : 'idle';
+
   if (!me) {
     const color = COLORS[colorIdx++ % COLORS.length], species = speciesOf(a.id);
     const cat = makeCharacter(species, color);
@@ -814,17 +944,21 @@ function upsert(a) {
     agents.set(a.id, me);
     me.born = performance.now();
   }
+
   if (me.state !== state || me.msg !== a.msg) {
     me.changedAt = performance.now();
     if (me.state !== state || !xpStore[me.id]) { xpStore[me.id] = (xpStore[me.id] || 0) + (state === 'idle' ? 25 : 10); saveXp(); }
   }
+
   me.realName = a.name || a.id;
   me.name = (window.nickOf && nickOf(a.id)) || me.realName; me.state = state; me.msg = a.msg || '';
   me.history = a.history || []; me.sessionId = a.sessionId; me.cwd = a.cwd;
 }
+
 function removeMissing(ids) {
   for (const [id, me] of agents) if (!ids.has(id)) { scene.remove(me.cat.g); me.tag.remove(); me.bubble.remove(); agents.delete(id); }
 }
+
 const lvl = xp => 1 + Math.floor(Math.sqrt((xp || 0) / 20));
 
 // resting agents drift between the sofa, the kitchen table, the bathtub, the bed and the balcony
@@ -835,27 +969,33 @@ const REST = [
   { x: -0.6, z: 9.4, sx: 1, sz: 0, y: 0.92, face: PI / 2, seats: [[-3.2, 9.8], [-3.2, 11.0]], via: [[1.55, 6.4], [1.55, 8.2]] },
   { x: 10.0, z: 8.3, sx: 1, sz: 0, y: 0.45, face: null, seats: [[9.2, 9.7], [10.8, 9.7]], via: [[6.6, 6.0], [6.6, 8.2]] },
 ];
+
 // sofa, kitchen, bath, bed, balcony: the bed wins at night, and nobody sits out in the rain
 const restWeights = () => {
   const w = darkness(hourNow()) > 0.5 ? [0.13, 0.08, 0.08, 0.6, 0.11] : [0.32, 0.2, 0.15, 0.13, 0.2];
   if (window.isRaining && isRaining()) { w[0] += w[4]; w[4] = 0; }
   return w;
 };
+
 const stationOf = (state, rest) => state === 'idle' ? REST[rest || 0] : PLACES[state];
+
 function pickRest(me, different) {
   let k;
   const w = restWeights();
   do { let r = Math.random(); k = 0; while (k < w.length - 1 && (r -= w[k]) > 0) k++; } while (different && k === me.rest);
   me.rest = k;
 }
+
 function slotOf(me) {
   const same = [...agents.values()].filter(a => a.state === me.state && (me.state !== 'idle' || a.rest === me.rest));
   return same.indexOf(me);
 }
+
 function angDiff(a, b) { let d = (b - a) % (PI * 2); if (d > PI) d -= PI * 2; if (d < -PI) d += PI * 2; return d; }
 
 // open floor in the middle of the living room; every trip passes through it
 const HUB = [0.6, 1.0];
+
 // [x, z, seatHeight]: seats fill first, everyone else lines up beside them
 function spotOf(me) {
   const st = stationOf(me.state, me.rest), i = slotOf(me), seats = st.seats || [];
@@ -863,6 +1003,7 @@ function spotOf(me) {
   const s = [0, -1, 1, -2, 2, -3, 3][(i - seats.length) % 7];
   return [st.x + st.sx * s, st.z + st.sz * s, seats.length ? 0 : (s === 0 ? st.y || 0 : 0)];
 }
+
 function planRoute(me) {
   const from = me.atPlace ? stationOf(me.atPlace, me.atRest).via || [] : [];
   const to = stationOf(me.state, me.rest).via || [];
@@ -878,22 +1019,27 @@ function stepAgent(me, dt, t) {
 
   if (me.target !== me.state) { if (me.state === 'idle') pickRest(me); planRoute(me); }
   else if (me.state === 'idle' && me.atPlace === 'idle' && performance.now() > me.restUntil) { pickRest(me, true); planRoute(me); }
+
   const spot = spotOf(me);
   if (me.route.length) me.route[me.route.length - 1] = spot.slice(0, 2);
 
   let walking = false, dir = null;
+
   if (me.route.length) {
     const [tx, tz] = me.route[0];
     const dx = tx - me.px, dz = tz - me.pz, d = Math.hypot(dx, dz);
     const step = 2.6 * dt;
+
     if (d <= step) {
       me.px = tx; me.pz = tz; me.route.shift();
       if (!me.route.length) { me.atPlace = me.state; me.atRest = me.rest; me.restUntil = performance.now() + 25000 + Math.random() * 20000; }
     } else { me.px += dx / d * step; me.pz += dz / d * step; }
+
     walking = me.route.length > 0;
     me.walking = walking;
     dir = Math.atan2(dx, dz);
   }
+
   const P = stationOf(me.state, me.rest);
   const seat = walking ? 0 : spot[2];
   me.py = me.py === undefined ? 0 : me.py + (seat - me.py) * Math.min(1, dt * 10);
@@ -907,12 +1053,14 @@ function stepAgent(me, dt, t) {
   // body language
   body.position.set(0, 0, 0); body.rotation.set(0, 0, 0); head.rotation.set(0, 0, 0);
   const s = t / 1000;
+
   if (walking) {
     body.position.y = Math.abs(Math.sin(s * 12)) * 0.12;
     body.rotation.z = Math.sin(s * 12) * 0.08;
     feet[0].position.z = 0.1 + Math.sin(s * 12) * 0.12; feet[1].position.z = 0.1 - Math.sin(s * 12) * 0.12;
   } else {
     feet[0].position.z = feet[1].position.z = 0.1;
+
     switch (me.state) {
       case 'idle': body.scale.y = 1 + Math.sin(s * 2) * 0.03; head.rotation.z = 0.25; break;
       case 'thinking': head.rotation.z = Math.sin(s * 1.5) * 0.2; head.rotation.x = -0.2; break;
@@ -923,6 +1071,7 @@ function stepAgent(me, dt, t) {
       case 'error': body.position.x = Math.sin(s * 40) * 0.04; head.rotation.z = Math.sin(s * 3) * 0.15; break;
     }
   }
+
   if (me.state !== 'idle' || walking) body.scale.y = 1;
   tail.rotation.z = Math.sin(s * (walking || me.state !== 'idle' ? 8 : 2)) * 0.5;
   // Blender-sculpted characters play their own walk, idle and blink clips on top
@@ -931,10 +1080,12 @@ function stepAgent(me, dt, t) {
 
 // ---------- labels ----------
 const v3 = new THREE.Vector3();
+
 function toScreen(p) {
   v3.copy(p).project(camera);
   return [(v3.x + 1) / 2 * innerWidth, (1 - v3.y) / 2 * innerHeight];
 }
+
 const placeLabels = Object.entries(PLACES).map(([k, P]) => {
   const el = Object.assign(document.createElement('div'), { className: 'lbl place' });
   const ic = Object.assign(document.createElement('i'), { textContent: P.icon });
@@ -942,6 +1093,7 @@ const placeLabels = Object.entries(PLACES).map(([k, P]) => {
   el.append(ic, P.name);
   labels.append(el); return [el, P];
 });
+
 // room labels that aren't a state
 // (rest: which REST spot resting friends use there)
 [['🍳', 'Kitchen', [9.3, 4.2, -6.6], '#ffe6dc', 1, 'Snack breaks at the little round table.'],
@@ -954,8 +1106,10 @@ const placeLabels = Object.entries(PLACES).map(([k, P]) => {
   el.append(ic, name); labels.append(el);
   placeLabels.push([el, { labelPos: new THREE.Vector3(...pos), icon, name, rest, desc }]);
 });
+
 // guide rows
 const rowEls = {};
+
 Object.entries(PLACES).forEach(([k, P]) => {
   const row = Object.assign(document.createElement('div'), { className: 'row' });
   const ic = Object.assign(document.createElement('div'), { className: 'ic', textContent: P.icon });
@@ -967,8 +1121,10 @@ Object.entries(PLACES).forEach(([k, P]) => {
   txt.append(b, Object.assign(document.createElement('small'), { textContent: P.desc }));
   row.append(ic, txt); $('rows').append(row); rowEls[k] = n;
 });
+
 function drawLabels() {
   placeLabels.forEach(([el, P]) => { const [x, y] = toScreen(P.labelPos); el.style.transform = `translate(${x}px,${y}px) translate(-50%,-100%)`; });
+
   for (const me of agents.values()) {
     const p = me.cat.g.position;
     const [x, y] = toScreen(v3.set(p.x, p.y + 1.85, p.z));
@@ -989,20 +1145,24 @@ function hourNow() {
   if (q !== null && q !== '' && !isNaN(+q)) return ((+q % 24) + 24) % 24;
   return bangkokHour();
 }
+
 // always Thai time, whatever time zone this computer is set to
 function bangkokHour() {
   const parts = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Bangkok', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date());
   const get = t => +parts.find(p => p.type === t).value;
   return get('hour') + get('minute') / 60;
 }
+
 function darkness(h) {
   if (h < 5 || h >= 19.5) return 1;
   if (h < 7) return 1 - (h - 5) / 2;
   if (h < 17) return 0;
   return (h - 17) / 2.5;
 }
+
 const C = c => new THREE.Color(c);
 const SKY = { day: C('#f3cfdb'), dusk: C('#ffc6a8'), night: C('#2c2546'), wet: C('#c9c1cf'), wetNight: C('#262338'), flash: C('#f4f0ff') };
+
 function applyTime(h, t) {
   const dk = darkness(h);
   // real Bangkok weather: grey skies and a softer sun when it's cloudy, lightning now and then in a storm
@@ -1038,6 +1198,7 @@ function renderHud() {
   const chips = $('chips');
   chips.innerHTML = '';
   if (!list.length) { chips.append(Object.assign(document.createElement('span'), { className: 'empty', textContent: 'Nobody home yet. Start a Claude Code session and a new friend will move in.' })); return; }
+
   for (const me of list) {
     const chip = Object.assign(document.createElement('button'), { className: 'chip' + (pickId === me.id ? ' sel' : ''), title: 'Open' });
     chip.onclick = () => (window.openAgent || openPicker)(me.id);
@@ -1051,16 +1212,20 @@ function renderHud() {
     chip.append(face, info); chips.append(chip);
   }
 }
+
 // ---------- look picker ----------
 let pickId = null;
+
 function openPicker(id) {
   const me = agents.get(id); if (!me) return;
   pickId = id;
   $('pkTitle').textContent = `Choose a look for ${me.name}`;
   const opts = $('pkOpts'); opts.innerHTML = '';
+
   Object.entries(SPECIES).forEach(([k, sp]) => {
     const b = Object.assign(document.createElement('button'), { className: 'opt' + (me.species === k ? ' on' : '') });
     b.append(Object.assign(document.createElement('span'), { textContent: sp.emoji }), sp.name);
+
     b.onclick = () => {
       if ($('pkAll').checked) {
         speciesStore = { _default: k };
@@ -1069,14 +1234,19 @@ function openPicker(id) {
         speciesStore[id] = k;
         if (me.species !== k) setSpecies(me, k);
       }
+
       saveSpecies(); openPicker(id); renderHud();
     };
+
     opts.append(b);
   });
+
   $('picker').hidden = false;
   renderHud();
 }
+
 $('pkClose').onclick = () => { $('picker').hidden = true; pickId = null; renderHud(); };
+
 // keep the town and the room in sync when a look changes in the other tab
 addEventListener('storage', e => {
   if (e.key !== SPECIES_KEY) return;
@@ -1092,12 +1262,15 @@ function toggle(btn, cls) {
     labels.classList.toggle(cls, !on);
   };
 }
+
 if (innerWidth < 1100 || innerHeight < 760) $('guide').open = false;
+
 toggle($('tNames'), 'hide-names'); toggle($('tBubbles'), 'hide-bubbles'); toggle($('tPlaces'), 'hide-places');
 $('tCam').onclick = () => { camera.position.copy(CAM_HOME); camera.zoom = 1; camera.updateProjectionMatrix(); controls.target.copy(CENTER); };
 
 // ---------- loop ----------
 let last = performance.now();
+
 function frame(t) {
   const dt = Math.min(0.05, (t - last) / 1000); last = t;
   applyTime(hourNow(), t);
@@ -1109,10 +1282,12 @@ function frame(t) {
   drawLabels();
   requestAnimationFrame(frame);
 }
+
 requestAnimationFrame(frame);
 
 // ---------- data: live server, else demo ----------
 let demo = false;
+
 async function poll() {
   try {
     if (!location.protocol.startsWith('http')) throw new Error('file');
@@ -1127,6 +1302,7 @@ async function poll() {
     setTimeout(poll, 1000);
   } catch { startDemo(); }
 }
+
 const DEMO_MSGS = {
   idle: ['Taking a nap', 'Waiting for you', 'All done ✨'],
   thinking: ['Thinking…', 'Making a plan'],
@@ -1136,11 +1312,13 @@ const DEMO_MSGS = {
   syncing: ['Handing off to a helper', 'Checking Slack'],
   error: ['Tests failed!', 'Oops, a 404', 'Help, please'],
 };
+
 function startDemo() {
   if (demo) return;
   demo = true;
   $('mode').innerHTML = '<i></i>DEMO'; $('mode').className = 'live demo';
   const names = ['Mochi', 'Bean', 'Peach', 'Bun', 'Sushi'], states = Object.keys(PLACES);
+
   names.forEach((n, i) => {
     const tick = () => {
       if (!demo) return;
@@ -1149,15 +1327,20 @@ function startDemo() {
       renderHud();
       setTimeout(tick, 5000 + Math.random() * 6000);
     };
+
     setTimeout(tick, i * 900);
   });
+
   const retry = async () => {
     try {
       if (!location.protocol.startsWith('http')) return;
       if ((await fetch('state', { cache: 'no-store' })).ok) { poll(); return; }
     } catch {}
+
     setTimeout(retry, 5000);
   };
+
   setTimeout(retry, 5000);
 }
+
 poll();
