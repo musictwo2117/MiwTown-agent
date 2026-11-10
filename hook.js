@@ -19,7 +19,9 @@ process.stdin.on('data', c => { input += c; }).on('end', () => {
     if (tool === 'Read') { state = 'researching'; msg = `Reading ${base(ti.file_path)}`; }
     else if (/^(Grep|Glob|LS)$/.test(tool)) { state = 'researching'; msg = `Searching ${ti.pattern || ''}`; }
     else if (/^Web(Fetch|Search)$/.test(tool)) { state = 'researching'; msg = 'Browsing the web'; }
-    else if (/^(Edit|Write|MultiEdit|NotebookEdit)$/.test(tool)) { state = 'writing'; msg = `Editing ${base(ti.file_path || ti.notebook_path)}`; }
+    else if (/^(Edit|Write|MultiEdit|NotebookEdit)$/.test(
+      tool
+    )) { state = 'writing'; msg = `Editing ${base(ti.file_path || ti.notebook_path)}`; }
     else if (tool === 'Bash') { state = 'executing'; msg = ti.description || ti.command; }
     else if (/^(Task|Agent)$/.test(tool)) { state = 'syncing'; msg = 'Handing off to a helper'; }
     else if (tool.startsWith('mcp__')) { state = 'syncing'; msg = tool.split('__').pop(); }

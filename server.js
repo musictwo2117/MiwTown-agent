@@ -8,12 +8,17 @@ const { spawn } = require('child_process');
 
 const PORT = Number(process.env.AGENT_OFFICE_PORT || 19100);
 const ROOT = path.join(__dirname, '..');   // the repo: agent/ (this), game/ and shared/
-const TYPES = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.glb': 'model/gltf-binary', '.ogg': 'audio/ogg', '.mp3': 'audio/mpeg', '.woff2': 'font/woff2' };
+const TYPES = {
+  '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
+  '.glb': 'model/gltf-binary', '.ogg': 'audio/ogg', '.mp3': 'audio/mpeg', '.woff2': 'font/woff2'
+};
 const STALE_MS = 5 * 60 * 1000;   // busy for this long with no update → back to idle
 const GONE_MS = 30 * 60 * 1000;   // silent for this long → leaves the room
 const JOB_TIMEOUT_MS = 30 * 60 * 1000;
 const MAX_RUNNING = 3;
-const CLAUDE = process.env.CLAUDE_BIN || (fs.existsSync(path.join(os.homedir(), '.local/bin/claude')) ? path.join(os.homedir(), '.local/bin/claude') : 'claude');
+const CLAUDE = process.env.CLAUDE_BIN || (fs.existsSync(
+  path.join(os.homedir(), '.local/bin/claude')
+) ? path.join(os.homedir(), '.local/bin/claude') : 'claude');
 
 // tasks sent from the UI may read and edit files in their folder, but never run commands or reach the web
 const TASK_FLAGS = ['--output-format', 'stream-json', '--verbose', '--permission-mode', 'acceptEdits',
@@ -31,7 +36,10 @@ function sweep() {
 
   for (const [id, a] of Object.entries(agents)) {
     if (now - a.ts > GONE_MS) delete agents[id];
-    else if (now - a.ts > STALE_MS && a.state !== 'idle') { Object.assign(a, { state: 'idle', msg: '' }); a.history.push({ ts: now, state: 'idle', msg: '' }); }
+    else if (now - a.ts > STALE_MS && a.state !== 'idle') {
+      Object.assign(a, { state: 'idle', msg: '' });
+      a.history.push({ ts: now, state: 'idle', msg: '' });
+    }
   }
 }
 
@@ -53,7 +61,9 @@ function checkFolder(dir) {
   const abs = path.resolve(dir.replace(/^~(?=$|\/)/, os.homedir()));
   const home = os.homedir();
   if (abs === home || !abs.startsWith(home + path.sep)) return 'Pick a folder inside your home folder.';
-  try { if (!fs.statSync(abs).isDirectory()) return "That path isn't a folder."; } catch { return "That folder doesn't exist."; }
+  try {
+    if (!fs.statSync(abs).isDirectory()) return "That path isn't a folder.";
+  } catch { return "That folder doesn't exist."; }
   return { abs };
 }
 
@@ -62,20 +72,30 @@ function checkFolder(dir) {
 // Drop them so each task uses your own `claude` login (an ANTHROPIC_API_KEY you set yourself still works).
 function taskEnv() {
   const env = { ...process.env };
-  for (const k of Object.keys(env)) if (/^CLAUDE/.test(k) || k === 'ANTHROPIC_BASE_URL' || k === 'ANTHROPIC_AUTH_TOKEN') delete env[k];
+  for (const k of Object.keys(
+    env
+  )) if (/^CLAUDE/.test(k) || k === 'ANTHROPIC_BASE_URL' || k === 'ANTHROPIC_AUTH_TOKEN') delete env[k];
   return env;
 }
 
 function startJob({ prompt, cwd, resume, label }) {
-  if (Object.values(jobs).filter(j => j.status === 'running').length >= MAX_RUNNING) return { error: `Up to ${MAX_RUNNING} tasks can run at once. Wait for one to finish.` };
+  if (Object.values(jobs).filter(
+    j => j.status === 'running'
+  ).length >= MAX_RUNNING) return { error: `Up to ${MAX_RUNNING} tasks can run at once. Wait for one to finish.` };
   const id = crypto.randomBytes(4).toString('hex');
   const args = ['-p', prompt, ...(resume ? ['--resume', resume, '--fork-session'] : []), ...TASK_FLAGS];
-  const job = { id, prompt, cwd, label, resumeOf: resume || null, status: 'running', startedAt: Date.now(), sessionId: null, log: [], result: '' };
+  const job = {
+    id, prompt, cwd, label, resumeOf: resume || null, status: 'running', startedAt: Date.now(), sessionId: null,
+    log: [], result: ''
+  };
   jobs[id] = job;
   let child;
 
   try { child = spawn(CLAUDE, args, { cwd, env: taskEnv(), stdio: ['ignore', 'pipe', 'pipe'] }); }
-  catch (e) { Object.assign(job, { status: 'error', result: `Couldn't start Claude Code: ${e.message}` }); return { job }; }
+  catch (e) {
+    Object.assign(job, { status: 'error', result: `Couldn't start Claude Code: ${e.message}` });
+    return { job };
+  }
 
   job.pid = child.pid;
   const note = line => { job.log.push(line.slice(0, 200)); if (job.log.length > 40) job.log.shift(); };
@@ -92,7 +112,9 @@ function startJob({ prompt, cwd, resume, label }) {
 
       if (ev.type === 'assistant') for (const part of ev.message?.content || []) {
         if (part.type === 'text' && part.text.trim()) note('💬 ' + part.text.trim());
-        if (part.type === 'tool_use') note(`🔧 ${part.name}${part.input?.file_path ? ' ' + path.basename(part.input.file_path) : ''}`);
+        if (part.type === 'tool_use') note(
+          `🔧 ${part.name}${part.input?.file_path ? ' ' + path.basename(part.input.file_path) : ''}`
+        );
       }
 
       if (ev.type === 'result') { job.result = String(ev.result || ''); job.status = ev.is_error ? 'error' : 'done'; }
@@ -101,11 +123,23 @@ function startJob({ prompt, cwd, resume, label }) {
 
   let errText = '';
   child.stderr.on('data', c => { errText = (errText + c).slice(-2000); });
-  child.on('error', e => Object.assign(job, { status: 'error', result: e.code === 'ENOENT' ? "Couldn't find the claude command. Set CLAUDE_BIN to its path." : e.message }));
+  child.on(
+    'error',
+    e => Object.assign(
+      job,
+      {
+        status: 'error',
+        result: e.code === 'ENOENT' ? "Couldn't find the claude command. Set CLAUDE_BIN to its path." : e.message
+      }
+    )
+  );
 
   child.on('close', code => {
     clearTimeout(job.timer);
-    if (job.status === 'running') Object.assign(job, { status: code === 0 ? 'done' : 'error', result: job.result || errText.trim() || `Stopped (exit ${code}).` });
+    if (job.status === 'running') Object.assign(
+      job,
+      { status: code === 0 ? 'done' : 'error', result: job.result || errText.trim() || `Stopped (exit ${code}).` }
+    );
     job.endedAt = Date.now();
   });
 
@@ -137,13 +171,17 @@ async function getWeather() {
   return weather;
 }
 
-const publicJob = j => ({ id: j.id, prompt: j.prompt, cwd: j.cwd, label: j.label, resumeOf: j.resumeOf, status: j.status, startedAt: j.startedAt, endedAt: j.endedAt, sessionId: j.sessionId, log: j.log, result: j.result });
+const publicJob = j => ({
+  id: j.id, prompt: j.prompt, cwd: j.cwd, label: j.label, resumeOf: j.resumeOf, status: j.status,
+  startedAt: j.startedAt, endedAt: j.endedAt, sessionId: j.sessionId, log: j.log, result: j.result
+});
 
 http.createServer((req, res) => {
   // refuse requests addressed to any other host name (blocks DNS-rebinding tricks)
   if (!ALLOWED_HOSTS.has(req.headers.host)) { res.statusCode = 403; return res.end(); }
   let url = req.url.split('?')[0];
-  if (/^\/agent\/(state|weather|jobs|task|folders)(\/|$)/.test(url)) url = url.slice('/agent'.length);   // pages in agent/ call these by relative address
+  // pages in agent/ call these by relative address
+  if (/^\/agent\/(state|weather|jobs|task|folders)(\/|$)/.test(url)) url = url.slice('/agent'.length);
 
   if (url === '/state' && req.method === 'GET') {
     sweep();
@@ -151,9 +189,12 @@ http.createServer((req, res) => {
   }
 
   // the Claude Code hook reports here. Only the hook may: it sends JSON and no Origin, while a web page
-  // posting here from a browser always sends an Origin, and can't send JSON cross-site without a preflight we never answer
+  // posting here from a browser always sends an Origin, and
+  // can't send JSON cross-site without a preflight we never answer
   if (url === '/state' && req.method === 'POST') {
-    if (req.headers.origin || !/^application\/json\b/.test(req.headers['content-type'] || '')) return send(res, 403, { error: 'forbidden' });
+    if (req.headers.origin || !/^application\/json\b/.test(
+      req.headers['content-type'] || ''
+    )) return send(res, 403, { error: 'forbidden' });
 
     return readJson(req, (err, d) => {
       if (err) return send(res, 400, { error: 'bad json' });
@@ -195,7 +236,11 @@ http.createServer((req, res) => {
 
       if (d.agentId) {
         const a = agents[d.agentId];
-        if (!a || !a.sessionId || !a.cwd) return send(res, 400, { error: "This agent can't take messages yet. It needs to do one more step first." });
+        if (!a || !a.sessionId || !a.cwd) return send(
+          res,
+          400,
+          { error: "This agent can't take messages yet. It needs to do one more step first." }
+        );
         // the same folder rule as new tasks, so a reported folder can't take a task outside your home folder
         const f = checkFolder(a.cwd);
         if (typeof f === 'string') return send(res, 400, { error: `Can't message this agent from here: ${f}` });
@@ -225,17 +270,27 @@ http.createServer((req, res) => {
   // folders the town already knows about, to suggest in the new-task dialog
   if (url === '/folders' && req.method === 'GET') {
     if (!authed) return send(res, 403, { error: 'forbidden' });
-    const seen = new Set([...Object.values(agents).map(a => a.cwd), ...Object.values(jobs).map(j => j.cwd)].filter(Boolean));
+    const seen = new Set(
+      [...Object.values(agents).map(a => a.cwd), ...Object.values(jobs).map(j => j.cwd)].filter(Boolean)
+    );
     return send(res, 200, [...seen].filter(p => typeof checkFolder(p) !== 'string'));
   }
 
   // the old addresses still work and lead to the pages' new homes
-  const GO = { '/': '/agent/town.html', '/town': '/agent/town.html', '/room': '/agent/room.html', '/game': '/game/game.html' };
-  if (GO[url] && req.method === 'GET') { res.statusCode = 302; res.setHeader('location', GO[url] + (req.url.includes('?') ? '?' + req.url.split('?').slice(1).join('?') : '')); return res.end(); }   // keep ?fps and the like
+  const GO = {
+    '/': '/agent/town.html', '/town': '/agent/town.html', '/room': '/agent/room.html', '/game': '/game/game.html'
+  };
+  if (GO[url] && req.method === 'GET') {
+    res.statusCode = 302;
+    res.setHeader('location', GO[url] + (req.url.includes('?') ? '?' + req.url.split('?').slice(1).join('?') : ''));
+    return res.end();
+  }   // keep ?fps and the like
 
   // pages, scripts, styles and models from agent/, game/ and shared/ (never the server itself or the hook)
   if (req.method === 'GET' && /^\/(agent|game|shared)\//.test(url)) {
-    let file; try { file = path.resolve(ROOT, decodeURIComponent(url).slice(1)); } catch { res.statusCode = 400; return res.end(); }
+    let file; try {
+      file = path.resolve(ROOT, decodeURIComponent(url).slice(1));
+    } catch { res.statusCode = 400; return res.end(); }
     const ext = path.extname(file), type = TYPES[ext];
     const inside = ['agent', 'game', 'shared'].some(d => file.startsWith(path.join(ROOT, d) + path.sep));
 
@@ -247,7 +302,9 @@ http.createServer((req, res) => {
         return res.end(fs.readFileSync(file, 'utf8').replace('__MIW_TOKEN__', TOKEN));
       }
 
-      if (ext === '.js' || ext === '.css') { if (!file.includes(path.sep + 'vendor' + path.sep)) res.setHeader('cache-control', 'no-store'); }
+      if (ext === '.js' || ext === '.css') {
+        if (!file.includes(path.sep + 'vendor' + path.sep)) res.setHeader('cache-control', 'no-store');
+      }
       return fs.createReadStream(file).pipe(res);
     }
   }
@@ -256,4 +313,10 @@ http.createServer((req, res) => {
 }).listen(PORT, '127.0.0.1', () => console.log(`Miw's Town → http://localhost:${PORT}`));
 
 // don't leave tasks running if the town shuts down
-for (const sig of ['SIGINT', 'SIGTERM']) process.on(sig, () => { Object.values(jobs).forEach(j => j.status === 'running' && j.child?.kill('SIGTERM')); process.exit(0); });
+for (const sig of [
+  'SIGINT',
+  'SIGTERM'
+]) process.on(
+  sig,
+  () => { Object.values(jobs).forEach(j => j.status === 'running' && j.child?.kill('SIGTERM')); process.exit(0); }
+);

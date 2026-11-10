@@ -86,8 +86,16 @@ const box = (w, h, d) => {
   const key = [w, h, d].join(',');
   if (boxCache[key]) return boxCache[key];
   const s = new THREE.Shape();
-  s.moveTo(-w / 2 + r, -h / 2 + r); s.lineTo(w / 2 - r, -h / 2 + r); s.lineTo(w / 2 - r, h / 2 - r); s.lineTo(-w / 2 + r, h / 2 - r);
-  const geo = new THREE.ExtrudeGeometry(s, { depth: d - 2 * r, bevelEnabled: true, bevelThickness: r, bevelSize: r - 0.0001, bevelSegments: 3, curveSegments: 4 });
+  s.moveTo(
+    -w / 2 + r,
+    -h / 2 + r
+  ); s.lineTo(w / 2 - r, -h / 2 + r); s.lineTo(w / 2 - r, h / 2 - r); s.lineTo(-w / 2 + r, h / 2 - r);
+  const geo = new THREE.ExtrudeGeometry(
+    s,
+    {
+      depth: d - 2 * r, bevelEnabled: true, bevelThickness: r, bevelSize: r - 0.0001, bevelSegments: 3, curveSegments: 4
+    }
+  );
   geo.translate(0, 0, -(d - 2 * r) / 2);
   geo.computeVertexNormals();
   return (boxCache[key] = geo);
@@ -112,13 +120,19 @@ const WALL_H = 4.6;
 // the room spans x -5.2..13.8 (living room, kitchen, bathroom) and z -7..7
 const RX0 = -5.2, RX1 = 13.8, RCX = (RX0 + RX1) / 2, RW = RX1 - RX0;
 
-for (let i = 0; i < RW; i++) scene.add(mesh(box(1, 0.12, 14), i % 2 ? '#f3d4ae' : '#eccb9f', { x: RX0 + 0.5 + i, y: 0.06, cast: false, recv: true }));
+for (let i = 0; i < RW; i++) scene.add(
+  mesh(box(1, 0.12, 14), i % 2 ? '#f3d4ae' : '#eccb9f', { x: RX0 + 0.5 + i, y: 0.06, cast: false, recv: true })
+);
 
 scene.add(mesh(box(RW + 0.3, WALL_H, 0.3), '#fde4ec', { x: RCX, y: WALL_H / 2, z: -7.15, recv: true }));
 LEFT.add(mesh(box(0.3, WALL_H, 14.3), '#fff0df', { x: -7.15, y: WALL_H / 2, recv: true }));
 
-for (let x = RX0 + 0.5; x < 6.5; x += 1) scene.add(mesh(box(0.4, WALL_H - 0.5, 0.02), '#fad3df', { x, y: WALL_H / 2 + 0.1, z: -6.99, cast: false }));
-for (let z = -6, k = 0; z < 7; z += 1.3, k++) for (let y = 1.1; y < WALL_H - 0.3; y += 1.1) LEFT.add(mesh(sph(0.07, 8), '#f6d2b0', { x: -6.99, y: y + (k % 2) * 0.55, z, cast: false }));
+for (let x = RX0 + 0.5; x < 6.5; x += 1) scene.add(
+  mesh(box(0.4, WALL_H - 0.5, 0.02), '#fad3df', { x, y: WALL_H / 2 + 0.1, z: -6.99, cast: false })
+);
+for (let z = -6, k = 0; z < 7; z += 1.3, k++) for (let y = 1.1; y < WALL_H - 0.3; y += 1.1) LEFT.add(
+  mesh(sph(0.07, 8), '#f6d2b0', { x: -6.99, y: y + (k % 2) * 0.55, z, cast: false })
+);
 
 scene.add(mesh(box(RW + 0.3, 0.32, 0.12), '#eab3c4', { x: RCX, y: 0.22, z: -6.96, cast: false }));
 LEFT.add(mesh(box(0.12, 0.32, 14.3), '#e8c39f', { x: -6.96, y: 0.22, cast: false }));
@@ -129,21 +143,62 @@ LEFT.add(mesh(box(0.4, 0.18, 14.3), '#f3dcc0', { x: -7.15, y: WALL_H + 0.09 }));
 // x/z: where the cat stands, (sx,sz): direction extra cats line up in, face: null = face the camera,
 // y: seat height, via: waypoints that keep the cat from walking through furniture
 const PLACES = {
-  idle:        { icon: '🛋️', name: 'Comfy Sofa',  desc: 'Resting: naps, snacks, bubble baths', x: -2.8, z: 2.6,  sx: 0, sz: 1.05, y: 0.78, face: PI / 2, label: [-4.4, 2.4, 2.6], seats: [[-4.1, 2.6], [-4.1, 1.55], [-4.1, 3.65]] },
-  thinking:    { icon: '💭', name: 'Whiteboard',  desc: 'Reading your prompt, planning',    x: -1.2, z: -5.6, sx: 1, sz: 0, face: null, label: [-1.2, 3.9, -6.8] },
-  writing:     { icon: '💻', name: 'Desk',        desc: 'Editing and creating files',       x: 2.4,  z: -2.7, sx: 1, sz: 0, y: 0.55, face: null, label: [2.4, 2.7, -0.6], via: [[0.2, -2.6]], seats: [[2.4, -1.85]] },
-  researching: { icon: '📚', name: 'Bookshelf',   desc: 'Reading, searching, browsing',     x: -3.7, z: -3.4, sx: 0, sz: 1, face: null, label: [-4.7, 4.0, -3.5] },
-  executing:   { icon: '🖥️', name: 'Server Rack', desc: 'Running commands and tests',       x: 5.6,  z: -4.5, sx: -1, sz: 0, face: null, label: [5.9, 3.9, -6.1], via: [[4.9, 0.6]] },
-  syncing:     { icon: '📡', name: 'Router Nook', desc: 'Handing off to helpers and tools', x: 2.6,  z: -5.25, sx: 1, sz: 0, face: null, label: [2.6, 4.3, -6.8], via: [[0.2, -2.6]] },
-  error:       { icon: '🐞', name: 'Bug Rug',     desc: 'Something failed, needs a look',   x: 4.6,  z: 4.5,  sx: 1, sz: 0, face: null, label: [4.6, 1.2, 4.6] },
+  idle:        {
+    icon: '🛋️',
+    name: 'Comfy Sofa',
+    desc: 'Resting: naps, snacks, bubble baths',
+    x: -2.8,
+    z: 2.6,
+    sx: 0,
+    sz: 1.05,
+    y: 0.78,
+    face: PI / 2,
+    label: [-4.4, 2.4, 2.6],
+    seats: [[-4.1, 2.6], [-4.1, 1.55], [-4.1, 3.65]]
+  },
+  thinking:    {
+    icon: '💭', name: 'Whiteboard', desc: 'Reading your prompt, planning', x: -1.2, z: -5.6, sx: 1, sz: 0, face: null,
+    label: [-1.2, 3.9, -6.8]
+  },
+  writing:     {
+    icon: '💻', name: 'Desk', desc: 'Editing and creating files', x: 2.4, z: -2.7, sx: 1, sz: 0, y: 0.55, face: null,
+    label: [2.4, 2.7, -0.6], via: [[0.2, -2.6]], seats: [[2.4, -1.85]]
+  },
+  researching: {
+    icon: '📚', name: 'Bookshelf', desc: 'Reading, searching, browsing', x: -3.7, z: -3.4, sx: 0, sz: 1, face: null,
+    label: [-4.7, 4.0, -3.5]
+  },
+  executing:   {
+    icon: '🖥️', name: 'Server Rack', desc: 'Running commands and tests', x: 5.6, z: -4.5, sx: -1, sz: 0, face: null,
+    label: [5.9, 3.9, -6.1], via: [[4.9, 0.6]]
+  },
+  syncing:     {
+    icon: '📡', name: 'Router Nook', desc: 'Handing off to helpers and tools', x: 2.6, z: -5.25, sx: 1, sz: 0,
+    face: null, label: [2.6, 4.3, -6.8], via: [[0.2, -2.6]]
+  },
+  error:       {
+    icon: '🐞', name: 'Bug Rug', desc: 'Something failed, needs a look', x: 4.6, z: 4.5, sx: 1, sz: 0, face: null,
+    label: [4.6, 1.2, 4.6]
+  },
 };
 
 Object.values(PLACES).forEach(P => { P.labelPos = new THREE.Vector3(...P.label); });
 
-const STATE_LABEL = { idle: 'Resting', thinking: 'Thinking', writing: 'Writing', researching: 'Researching', executing: 'Running', syncing: 'Syncing', error: 'Stuck' };
-const STATE_ICON = { idle: '💤', thinking: '💭', writing: '✏️', researching: '📚', executing: '⚙️', syncing: '📮', error: '🐞' };
-const STATE_COLOR = { idle: '#f6c35b', thinking: '#b9a6f5', writing: '#ffb36b', researching: '#7fb8ee', executing: '#7cc68a', syncing: '#e8c547', error: '#f07878' };
-const TINT = { idle: '#ffe3ea', thinking: '#ece5ff', writing: '#ffefd9', researching: '#e2f0ff', executing: '#e3f5e1', syncing: '#fff4c9', error: '#ffe1de' };
+const STATE_LABEL = {
+  idle: 'Resting', thinking: 'Thinking', writing: 'Writing', researching: 'Researching', executing: 'Running',
+  syncing: 'Syncing', error: 'Stuck'
+};
+const STATE_ICON = {
+  idle: '💤', thinking: '💭', writing: '✏️', researching: '📚', executing: '⚙️', syncing: '📮', error: '🐞'
+};
+const STATE_COLOR = {
+  idle: '#f6c35b', thinking: '#b9a6f5', writing: '#ffb36b', researching: '#7fb8ee', executing: '#7cc68a',
+  syncing: '#e8c547', error: '#f07878'
+};
+const TINT = {
+  idle: '#ffe3ea', thinking: '#ece5ff', writing: '#ffefd9', researching: '#e2f0ff', executing: '#e3f5e1',
+  syncing: '#fff4c9', error: '#ffe1de'
+};
 
 const windowMat = new THREE.MeshLambertMaterial({ color: '#fff1c4', emissive: '#ffcf70', emissiveIntensity: 0 });
 const bulbMat = new THREE.MeshLambertMaterial({ color: '#fff6d8', emissive: '#ffcf70', emissiveIntensity: 0 });
@@ -182,7 +237,13 @@ piece('bookshelf', LEFT, () => {
 
     while (z < 1.25) {
       const w = 0.14 + rand() * 0.12, h = 0.42 + rand() * 0.22;
-      if (rand() > 0.12) g.add(mesh(box(0.55, h, w), BOOKS[Math.floor(rand() * BOOKS.length)], { x: 0.1, y: y0 + 0.04 + h / 2, z: z + w / 2, rx: rand() > 0.9 ? 0.15 : 0 }));
+      if (rand() > 0.12) g.add(
+        mesh(
+          box(0.55, h, w),
+          BOOKS[Math.floor(rand() * BOOKS.length)],
+          { x: 0.1, y: y0 + 0.04 + h / 2, z: z + w / 2, rx: rand() > 0.9 ? 0.15 : 0 }
+        )
+      );
       z += w + 0.02;
     }
   }
@@ -194,10 +255,16 @@ piece('bookshelf', LEFT, () => {
 piece('whiteboard', LEFT, () => {
   LEFT.add(mesh(box(3.3, 2.0, 0.12), '#d7d9e3', { x: -3, y: 2.5, z: -6.92 }));
   LEFT.add(mesh(box(3.05, 1.78, 0.06), '#ffffff', { x: -3, y: 2.5, z: -6.84, cast: false }));
-  [[-3.8, 3.0, 1.0, '#8fc1f0'], [-3.5, 2.7, 1.6, '#8fc1f0'], [-3.9, 2.4, 0.8, '#f49a91']].forEach(([x, y, w, c]) => LEFT.add(mesh(box(w, 0.06, 0.02), c, { x: x + w / 2 - 0.3, y, z: -6.8, cast: false })));
+  [[-3.8, 3.0, 1.0, '#8fc1f0'], [-3.5, 2.7, 1.6, '#8fc1f0'], [-3.9, 2.4, 0.8, '#f49a91']].forEach(
+    ([x, y, w, c]) => LEFT.add(mesh(box(w, 0.06, 0.02), c, { x: x + w / 2 - 0.3, y, z: -6.8, cast: false }))
+  );
   LEFT.add(mesh(box(0.55, 0.55, 0.03), '#ffe08a', { x: -2.0, y: 2.9, z: -6.79, cast: false }));
   LEFT.add(mesh(box(0.5, 0.5, 0.03), '#ffc4d6', { x: -1.95, y: 2.2, z: -6.79, rz: 0.1, cast: false }));
-  [0.25, 0.45, 0.35].forEach((h, i) => LEFT.add(mesh(box(0.18, h, 0.02), '#9fd49a', { x: -3.9 + i * 0.28, y: 1.85 + h / 2, z: -6.8, cast: false })));
+  [0.25, 0.45, 0.35].forEach(
+    (h, i) => LEFT.add(
+      mesh(box(0.18, h, 0.02), '#9fd49a', { x: -3.9 + i * 0.28, y: 1.85 + h / 2, z: -6.8, cast: false })
+    )
+  );
   LEFT.add(mesh(box(2.6, 0.08, 0.18), '#c7c9d3', { x: -3, y: 1.48, z: -6.82 }));
 });
 
@@ -214,17 +281,34 @@ let skyMat, sunMoon;
   scene.add(mesh(box(0.08, 1.8, 0.08), '#ffffff', { x: 2.6, y: 2.75, z: -6.8, cast: false }));
   scene.add(mesh(box(2.35, 0.08, 0.08), '#ffffff', { x: 2.6, y: 2.75, z: -6.8, cast: false }));
   scene.add(mesh(box(3.0, 0.12, 0.45), '#fff4ea', { x: 2.6, y: 1.65, z: -6.75 }));
-  [-0.55, 0.55].forEach(dx => scene.add(mesh(box(0.9, 1.9, 0.06), '#ffc4d6', { x: 2.6 + dx * 2.9, y: 2.75, z: -6.78, cast: false })));
+  [-0.55, 0.55].forEach(
+    dx => scene.add(mesh(box(0.9, 1.9, 0.06), '#ffc4d6', { x: 2.6 + dx * 2.9, y: 2.75, z: -6.78, cast: false }))
+  );
 
   piece('routertable', scene, () => {
     scene.add(mesh(box(2.0, 0.1, 0.95), '#d8a77d', { x: 2.6, y: 1.0, z: -6.3 }));
-    [[-0.9, -0.38], [0.9, -0.38], [-0.9, 0.38], [0.9, 0.38]].forEach(([dx, dz]) => scene.add(mesh(box(0.08, 0.95, 0.08), '#b88a62', { x: 2.6 + dx, y: 0.5, z: -6.3 + dz })));
+    [[-0.9, -0.38], [0.9, -0.38], [-0.9, 0.38], [0.9, 0.38]].forEach(
+      ([dx, dz]) => scene.add(mesh(box(0.08, 0.95, 0.08), '#b88a62', { x: 2.6 + dx, y: 0.5, z: -6.3 + dz }))
+    );
     scene.add(mesh(box(0.85, 0.2, 0.5), '#b5ccff', { x: 2.6, y: 1.15, z: -6.35 }));
-    [-0.3, 0.3].forEach(dx => scene.add(mesh(cyl(0.025, 0.025, 0.55, 6), '#6f7aa0', { x: 2.6 + dx, y: 1.5, z: -6.5, rz: dx * 0.6 })));
+    [-0.3, 0.3].forEach(
+      dx => scene.add(mesh(cyl(0.025, 0.025, 0.55, 6), '#6f7aa0', { x: 2.6 + dx, y: 1.5, z: -6.5, rz: dx * 0.6 }))
+    );
   });
 
-  const leds = [0, 1, 2, 3].map(i => { const m = new THREE.Mesh(sph(0.04, 8), new THREE.MeshBasicMaterial({ color: '#7cff9a' })); m.position.set(2.35 + i * 0.16, 1.17, -6.09); scene.add(m); return m; });
-  animated.push(t => leds.forEach((m, i) => m.material.color.set((Math.floor(t / 250) + i) % 3 ? (i % 2 ? '#ffe08a' : '#7cff9a') : '#3b4566')));
+  const leds = [0, 1, 2, 3].map(
+    i => {
+      const m = new THREE.Mesh(sph(0.04, 8), new THREE.MeshBasicMaterial({ color: '#7cff9a' }));
+      m.position.set(2.35 + i * 0.16, 1.17, -6.09);
+      scene.add(m);
+      return m;
+    }
+  );
+  animated.push(
+    t => leds.forEach(
+      (m, i) => m.material.color.set((Math.floor(t / 250) + i) % 3 ? (i % 2 ? '#ffe08a' : '#7cff9a') : '#3b4566')
+    )
+  );
 }
 
 // server rack in the back-right corner
@@ -241,10 +325,25 @@ let skyMat, sunMoon;
   const lights = [];
 
   for (let i = 0; i < 6; i++) {
-    [0, 1].forEach(k => { const m = new THREE.Mesh(sph(0.04, 8), new THREE.MeshBasicMaterial({ color: '#7cff9a' })); m.position.set(6.2 + k * 0.13, 0.45 + i * 0.47, -5.49); scene.add(m); lights.push(m); });
+    [0, 1].forEach(
+      k => {
+        const m = new THREE.Mesh(sph(0.04, 8), new THREE.MeshBasicMaterial({ color: '#7cff9a' }));
+        m.position.set(6.2 + k * 0.13, 0.45 + i * 0.47, -5.49);
+        scene.add(m);
+        lights.push(m);
+      }
+    );
   }
 
-  animated.push(t => lights.forEach((m, i) => m.material.color.set(i % 2 ? (Math.sin(t / 90 + i) > 0.6 ? '#ff7a7a' : '#5a2a3a') : (Math.sin(t / 180 + i * 1.7) > 0 ? '#7cff9a' : '#245a35'))));
+  animated.push(
+    t => lights.forEach(
+      (m, i) => m.material.color.set(
+        i % 2 ? (Math.sin(
+          t / 90 + i
+        ) > 0.6 ? '#ff7a7a' : '#5a2a3a') : (Math.sin(t / 180 + i * 1.7) > 0 ? '#7cff9a' : '#245a35')
+      )
+    )
+  );
   const L = new THREE.PointLight(0x9fffc0, 0, 4, 2); L.position.set(5.9, 1.5, -4.9); scene.add(L); lampLights.push(L);
 }
 
@@ -254,20 +353,30 @@ let skyMat, sunMoon;
 
   piece('desk', scene, () => {
     scene.add(mesh(box(3.0, 0.14, 1.35), '#e2b088', { x: D.x, y: 1.1, z: D.z }));
-    [[-1.35, -0.55], [1.35, -0.55], [-1.35, 0.55], [1.35, 0.55]].forEach(([dx, dz]) => scene.add(mesh(box(0.1, 1.05, 0.1), '#c4926a', { x: D.x + dx, y: 0.53, z: D.z + dz })));
+    [[-1.35, -0.55], [1.35, -0.55], [-1.35, 0.55], [1.35, 0.55]].forEach(
+      ([dx, dz]) => scene.add(mesh(box(0.1, 1.05, 0.1), '#c4926a', { x: D.x + dx, y: 0.53, z: D.z + dz }))
+    );
     scene.add(mesh(box(1.05, 0.05, 0.7), '#e6e8f0', { x: D.x, y: 1.2, z: D.z - 0.05 }));
     scene.add(mesh(box(1.05, 0.7, 0.05), '#ffc4d6', { x: D.x, y: 1.55, z: D.z + 0.28, rx: 0.12 }));
-    [-0.07, 0.07].forEach(dx => scene.add(mesh(sph(0.06, 10), '#ff7b9c', { x: D.x + dx, y: 1.6, z: D.z + 0.33, cast: false })));
-    scene.add(mesh(cone(0.085, 0.12, 4), '#ff7b9c', { x: D.x, y: 1.52, z: D.z + 0.33, rx: PI, ry: PI / 4, cast: false }));
+    [-0.07, 0.07].forEach(
+      dx => scene.add(mesh(sph(0.06, 10), '#ff7b9c', { x: D.x + dx, y: 1.6, z: D.z + 0.33, cast: false }))
+    );
+    scene.add(
+      mesh(cone(0.085, 0.12, 4), '#ff7b9c', { x: D.x, y: 1.52, z: D.z + 0.33, rx: PI, ry: PI / 4, cast: false })
+    );
     scene.add(mesh(cyl(0.12, 0.1, 0.25, 14), '#8fc1f0', { x: D.x - 1.05, y: 1.3, z: D.z + 0.2 }));
-    scene.add(mesh(new THREE.TorusGeometry(0.07, 0.02, 6, 10), '#8fc1f0', { x: D.x - 0.9, y: 1.3, z: D.z + 0.2, ry: PI / 2 }));
+    scene.add(
+      mesh(new THREE.TorusGeometry(0.07, 0.02, 6, 10), '#8fc1f0', { x: D.x - 0.9, y: 1.3, z: D.z + 0.2, ry: PI / 2 })
+    );
     scene.add(mesh(cyl(0.13, 0.11, 0.2, 10), '#f49a91', { x: D.x + 1.1, y: 1.27, z: D.z - 0.25 }));
     scene.add(mesh(sph(0.2, 10), '#9fd49a', { x: D.x + 1.1, y: 1.5, z: D.z - 0.25 }));
     scene.add(mesh(cyl(0.38, 0.38, 0.12, 18), '#b9a6f5', { x: D.x, y: 0.5, z: -1.85 }));
     scene.add(mesh(cyl(0.06, 0.06, 0.45, 8), '#8a7a80', { x: D.x, y: 0.22, z: -1.85 }));
   });
 
-  const L = new THREE.PointLight(0xbfd9ff, 0, 3.5, 2); L.position.set(D.x, 1.7, D.z - 0.6); scene.add(L); lampLights.push(L);
+  const L = new THREE.PointLight(
+    0xbfd9ff, 0, 3.5, 2
+  ); L.position.set(D.x, 1.7, D.z - 0.6); scene.add(L); lampLights.push(L);
 }
 
 // sofa against the left wall
@@ -294,19 +403,36 @@ piece('sofa', LEFT, () => {
 
   piece('cornerplant', LEFT, () => {
     LEFT.add(mesh(cyl(0.35, 0.28, 0.6, 14), '#f49a91', { x: -6.3, y: 0.3, z: -6.3 }));
-    [[0, 1.0, 0, 0.45], [0.25, 1.45, 0.1, 0.35], [-0.2, 1.35, -0.15, 0.32]].forEach(([dx, y, dz, r]) => LEFT.add(mesh(sph(r, 12), '#9fd49a', { x: -6.3 + dx, y, z: -6.3 + dz })));
+    [[0, 1.0, 0, 0.45], [0.25, 1.45, 0.1, 0.35], [-0.2, 1.35, -0.15, 0.32]].forEach(
+      ([dx, y, dz, r]) => LEFT.add(mesh(sph(r, 12), '#9fd49a', { x: -6.3 + dx, y, z: -6.3 + dz }))
+    );
   });
 
   LEFT.add(mesh(cyl(0.6, 0.6, 0.1, 28), '#ffffff', { x: -6.95, y: 3.2, z: 0.4, rz: PI / 2 }));
   LEFT.add(mesh(cyl(0.52, 0.52, 0.02, 28), '#fff6e8', { x: -6.89, y: 3.2, z: 0.4, rz: PI / 2, cast: false }));
   // the hands only move once a minute, so keep them out of the static merge
-  const hand = (len, w, c) => { const g = new THREE.Group(); g.position.set(-6.86, 3.2, 0.4); g.userData.noMerge = true; g.add(mesh(box(0.03, len, w), c, { y: len / 2, cast: false })); LEFT.add(g); return g; };
+  const hand = (len, w, c) => {
+    const g = new THREE.Group();
+    g.position.set(-6.86, 3.2, 0.4);
+    g.userData.noMerge = true;
+    g.add(mesh(box(0.03, len, w), c, { y: len / 2, cast: false }));
+    LEFT.add(g);
+    return g;
+  };
   const hourHand = hand(0.28, 0.06, '#5a3d4a'), minHand = hand(0.42, 0.04, '#ff7b9c');
-  animated.push(() => { const h = hourNow(); hourHand.rotation.x = -(h % 12) / 12 * PI * 2; minHand.rotation.x = -(h % 1) * PI * 2; });
+  animated.push(
+    () => {
+      const h = hourNow();
+      hourHand.rotation.x = -(h % 12) / 12 * PI * 2;
+      minHand.rotation.x = -(h % 1) * PI * 2;
+    }
+  );
 
   LEFT.add(mesh(box(0.08, 0.9, 1.1), '#e2b088', { x: -6.95, y: 3.2, z: -1.1 }));
   LEFT.add(mesh(box(0.03, 0.7, 0.9), '#fff6e8', { x: -6.9, y: 3.2, z: -1.1, cast: false }));
-  [-0.09, 0.09].forEach(dz => LEFT.add(mesh(sph(0.1, 10), '#ff7b9c', { x: -6.87, y: 3.25, z: -1.1 + dz, cast: false })));
+  [-0.09, 0.09].forEach(
+    dz => LEFT.add(mesh(sph(0.1, 10), '#ff7b9c', { x: -6.87, y: 3.25, z: -1.1 + dz, cast: false }))
+  );
   LEFT.add(mesh(cone(0.14, 0.2, 4), '#ff7b9c', { x: -6.87, y: 3.1, z: -1.1, rx: PI, ry: PI / 4, cast: false }));
 }
 
@@ -331,29 +457,54 @@ piece('sofa', LEFT, () => {
     bug.add(mesh(sph(0.13, 10), '#5a3d4a', { s: [1, 0.6, 1.3] }));
     bug.add(mesh(sph(0.07, 8), '#5a3d4a', { z: 0.17 }));
     scene.add(bug);
-    animated.push(t => { const a = t / (1100 + i * 350) + i * 2.1, r = 1.25 - i * 0.2; bug.position.set(4.6 + Math.cos(a) * r, 0.22, 4.6 + Math.sin(a) * r); bug.rotation.y = -a; });
+    animated.push(
+      t => {
+        const a = t / (1100 + i * 350) + i * 2.1, r = 1.25 - i * 0.2;
+        bug.position.set(4.6 + Math.cos(a) * r, 0.22, 4.6 + Math.sin(a) * r);
+        bug.rotation.y = -a;
+      }
+    );
   }
 }
 
 // ---------- kitchen (back right) ----------
 {
   for (let i = 0; i < 8; i++) for (let j = 0; j < 7; j++)
-    EAST.add(mesh(box(0.92, 0.02, 0.92), (i + j) % 2 ? '#e3f5ee' : '#ffffff', { x: 7.6 + 0.5 + i * 0.925, y: 0.13, z: -6.5 + j * 0.925, cast: false, recv: true }));
+    EAST.add(
+      mesh(
+        box(0.92, 0.02, 0.92),
+        (i + j) % 2 ? '#e3f5ee' : '#ffffff',
+        { x: 7.6 + 0.5 + i * 0.925, y: 0.13, z: -6.5 + j * 0.925, cast: false, recv: true }
+      )
+    );
 
   // mint tiles behind the counter
   for (let i = 0; i < 12; i++) for (let j = 0; j < 4; j++)
-    EAST.add(mesh(box(0.38, 0.38, 0.02), (i + j) % 2 ? '#c9eedf' : '#e9faf3', { x: 8.0 + i * 0.4, y: 1.35 + j * 0.4, z: -6.98, cast: false }));
+    EAST.add(
+      mesh(
+        box(0.38, 0.38, 0.02),
+        (i + j) % 2 ? '#c9eedf' : '#e9faf3',
+        { x: 8.0 + i * 0.4, y: 1.35 + j * 0.4, z: -6.98, cast: false }
+      )
+    );
 
   piece('kitchen', EAST, () => {
     EAST.add(mesh(box(5.0, 1.05, 1.0), '#fff6ef', { x: 10.5, y: 0.6, z: -6.45 }));
     EAST.add(mesh(box(5.1, 0.1, 1.08), '#f7c6d4', { x: 10.5, y: 1.15, z: -6.43 }));
-    [8.6, 9.8, 11.0, 12.2].forEach(x => { EAST.add(mesh(box(1.05, 0.8, 0.03), '#ffeae2', { x, y: 0.58, z: -5.94, cast: false })); EAST.add(mesh(box(0.25, 0.05, 0.05), '#d9a0b0', { x, y: 0.88, z: -5.91, cast: false })); });
+    [8.6, 9.8, 11.0, 12.2].forEach(
+      x => {
+        EAST.add(mesh(box(1.05, 0.8, 0.03), '#ffeae2', { x, y: 0.58, z: -5.94, cast: false }));
+        EAST.add(mesh(box(0.25, 0.05, 0.05), '#d9a0b0', { x, y: 0.88, z: -5.91, cast: false }));
+      }
+    );
     // sink and faucet
     EAST.add(mesh(box(1.0, 0.04, 0.6), '#b9c6d6', { x: 9.0, y: 1.21, z: -6.4, cast: false }));
     EAST.add(mesh(cyl(0.04, 0.04, 0.45, 8), '#c7ccd8', { x: 9.0, y: 1.42, z: -6.8 }));
     EAST.add(mesh(cyl(0.035, 0.035, 0.3, 8), '#c7ccd8', { x: 9.0, y: 1.62, z: -6.65, rx: PI / 2 }));
     // stove with a bubbling pot
-    [-0.3, 0.3].forEach(dx => EAST.add(mesh(cyl(0.22, 0.22, 0.03, 18), '#4b3442', { x: 11.6 + dx, y: 1.22, z: -6.4, cast: false })));
+    [-0.3, 0.3].forEach(
+      dx => EAST.add(mesh(cyl(0.22, 0.22, 0.03, 18), '#4b3442', { x: 11.6 + dx, y: 1.22, z: -6.4, cast: false }))
+    );
     EAST.add(mesh(cyl(0.25, 0.22, 0.32, 18), '#ff9fb5', { x: 11.3, y: 1.4, z: -6.4 }));
     EAST.add(mesh(cyl(0.26, 0.26, 0.04, 18), '#ffc4d6', { x: 11.3, y: 1.58, z: -6.4 }));
   });
@@ -361,7 +512,14 @@ piece('sofa', LEFT, () => {
   for (let i = 0; i < 3; i++) {
     const puff = new THREE.Mesh(sph(0.1, 10), new THREE.MeshLambertMaterial({ color: '#ffffff', transparent: true }));
     EAST.add(puff);
-    animated.push(t => { const k = ((t / 1800) + i / 3) % 1; puff.position.set(11.3 + Math.sin(k * 5 + i) * 0.1, 1.7 + k * 1.1, -6.4); puff.scale.setScalar(0.6 + k); puff.material.opacity = 0.8 * (1 - k); });
+    animated.push(
+      t => {
+        const k = ((t / 1800) + i / 3) % 1;
+        puff.position.set(11.3 + Math.sin(k * 5 + i) * 0.1, 1.7 + k * 1.1, -6.4);
+        puff.scale.setScalar(0.6 + k);
+        puff.material.opacity = 0.8 * (1 - k);
+      }
+    );
   }
 
   // shelf with jars
@@ -379,7 +537,9 @@ piece('sofa', LEFT, () => {
     EAST.add(mesh(box(1.35, 3.0, 1.1), '#c9ecdf', { x: 14.0, y: 1.6, z: -6.35 }));
     EAST.add(mesh(box(1.3, 0.03, 0.02), '#a6d8c6', { x: 14.0, y: 2.3, z: -5.79, cast: false }));
     [1.2, 2.8].forEach(y => EAST.add(mesh(box(0.06, 0.5, 0.06), '#ffffff', { x: 13.5, y, z: -5.75 })));
-    [-0.05, 0.05].forEach(dx => EAST.add(mesh(sph(0.06, 8), '#ff7b9c', { x: 14.2 + dx, y: 2.62, z: -5.78, cast: false })));
+    [-0.05, 0.05].forEach(
+      dx => EAST.add(mesh(sph(0.06, 8), '#ff7b9c', { x: 14.2 + dx, y: 2.62, z: -5.78, cast: false }))
+    );
     EAST.add(mesh(cone(0.08, 0.1, 4), '#ff7b9c', { x: 14.2, y: 2.55, z: -5.78, rx: PI, ry: PI / 4, cast: false }));
   });
 
@@ -399,7 +559,9 @@ piece('sofa', LEFT, () => {
 
   // a plate of warm mini pretzels
   [[-0.09, 0.02, 0.4], [0.1, -0.06, -0.5]].forEach(([dx, dz, ry]) => {
-    const p = makePretzel(); p.scale.setScalar(0.16); p.position.set(10.5 + dx, 1.12, -2.6 + dz); p.rotation.set(-PI / 2, 0, ry); EAST.add(p);
+    const p = makePretzel(); p.scale.setScalar(
+      0.16
+    ); p.position.set(10.5 + dx, 1.12, -2.6 + dz); p.rotation.set(-PI / 2, 0, ry); EAST.add(p);
   });
 
   // pendant lamp over the table
@@ -415,14 +577,22 @@ piece('sofa', LEFT, () => {
 // ---------- bathroom (front right, behind a low wall) ----------
 {
   for (let i = 0; i < 7; i++) for (let j = 0; j < 6; j++)
-    EAST.add(mesh(box(0.9, 0.02, 0.9), (i + j) % 2 ? '#dcecfb' : '#f4f9ff', { x: 9.15 + i * 0.92, y: 0.13, z: 1.55 + j * 0.92, cast: false, recv: true }));
+    EAST.add(
+      mesh(
+        box(0.9, 0.02, 0.9),
+        (i + j) % 2 ? '#dcecfb' : '#f4f9ff',
+        { x: 9.15 + i * 0.92, y: 0.13, z: 1.55 + j * 0.92, cast: false, recv: true }
+      )
+    );
 
   const WALL = '#dcefec', H = 2.1;
   EAST.add(mesh(box(6.4, H, 0.2), WALL, { x: 11.8, y: H / 2, z: 1.0 }));
   EAST.add(mesh(box(0.2, H, 2.1), WALL, { x: 8.6, y: H / 2, z: 2.05 }));
   EAST.add(mesh(box(0.2, H, 2.3), WALL, { x: 8.6, y: H / 2, z: 5.85 }));
   EAST.add(mesh(box(6.5, 0.1, 0.3), '#c3e3dd', { x: 11.8, y: H + 0.05, z: 1.0 }));
-  [[8.6, 2.05, 2.1], [8.6, 5.85, 2.3]].forEach(([x, z, d]) => EAST.add(mesh(box(0.3, 0.1, d + 0.05), '#c3e3dd', { x, y: H + 0.05, z })));
+  [[8.6, 2.05, 2.1], [8.6, 5.85, 2.3]].forEach(
+    ([x, z, d]) => EAST.add(mesh(box(0.3, 0.1, d + 0.05), '#c3e3dd', { x, y: H + 0.05, z }))
+  );
 
   // bathtub full of bubbles, with a rubber duck
   piece('bathtub', EAST, () => {
@@ -430,7 +600,9 @@ piece('sofa', LEFT, () => {
     [-1, 1].forEach(sd => EAST.add(mesh(box(3.0, 0.8, 0.16), '#fffaf6', { x: 12.6, y: 0.5, z: 5.2 + sd * 0.72 })));
     [-1, 1].forEach(sd => EAST.add(mesh(box(0.16, 0.8, 1.3), '#fffaf6', { x: 12.6 + sd * 1.42, y: 0.5, z: 5.2 })));
     EAST.add(mesh(box(2.7, 0.05, 1.3), '#a6dcf5', { x: 12.6, y: 0.66, z: 5.2, cast: false }));
-    [[-1.35, -0.65], [1.35, -0.65], [-1.35, 0.65], [1.35, 0.65]].forEach(([dx, dz]) => EAST.add(mesh(sph(0.08, 8), '#ffd27a', { x: 12.6 + dx, y: 0.1, z: 5.2 + dz })));
+    [[-1.35, -0.65], [1.35, -0.65], [-1.35, 0.65], [1.35, 0.65]].forEach(
+      ([dx, dz]) => EAST.add(mesh(sph(0.08, 8), '#ffd27a', { x: 12.6 + dx, y: 0.1, z: 5.2 + dz }))
+    );
     EAST.add(mesh(cyl(0.04, 0.04, 0.5, 8), '#c7ccd8', { x: 14.0, y: 1.15, z: 5.2 }));
   });
 
@@ -446,7 +618,14 @@ piece('sofa', LEFT, () => {
   duck.add(mesh(sph(0.16, 12), '#ffd23f', { s: [1.2, 0.8, 1] }));
   duck.add(mesh(sph(0.1, 10), '#ffd23f', { x: 0.1, y: 0.15 }));
   duck.add(mesh(cone(0.04, 0.09, 8), '#ffa94d', { x: 0.21, y: 0.14, rz: -PI / 2, cast: false }));
-  EAST.add(duck); animated.push(t => { duck.position.set(13.4 + Math.sin(t / 2500) * 0.3, 0.8 + Math.sin(t / 500) * 0.03, 5.0); duck.rotation.y = Math.sin(t / 2500) * 0.6; });
+  EAST.add(
+    duck
+  ); animated.push(
+    t => {
+      duck.position.set(13.4 + Math.sin(t / 2500) * 0.3, 0.8 + Math.sin(t / 500) * 0.03, 5.0);
+      duck.rotation.y = Math.sin(t / 2500) * 0.6;
+    }
+  );
   piece('bathtub', EAST, () => {
     EAST.add(mesh(box(1.4, 0.03, 0.8), '#ffc4d6', { x: 12.4, y: 0.15, z: 6.5, cast: false }));
   });
@@ -472,20 +651,28 @@ piece('sofa', LEFT, () => {
 
 // ---------- bedroom (front left annex) ----------
 {
-  for (let i = 0; i < 11; i++) LEFT.add(mesh(box(1, 0.12, 6), i % 2 ? '#f3d4ae' : '#eccb9f', { x: -6.5 + i, y: 0.06, z: 10, cast: false, recv: true }));
+  for (let i = 0; i < 11; i++) LEFT.add(
+    mesh(box(1, 0.12, 6), i % 2 ? '#f3d4ae' : '#eccb9f', { x: -6.5 + i, y: 0.06, z: 10, cast: false, recv: true })
+  );
   LEFT.add(mesh(box(0.3, WALL_H, 6.1), '#fff0df', { x: -7.15, y: WALL_H / 2, z: 10.1, recv: true }));
   LEFT.add(mesh(box(0.12, 0.32, 6.1), '#e8c39f', { x: -6.96, y: 0.22, z: 10.1, cast: false }));
   LEFT.add(mesh(box(0.4, 0.18, 6.1), '#f3dcc0', { x: -7.15, y: WALL_H + 0.09, z: 10.1 }));
-  for (let z = 7.6, k = 0; z < 13; z += 1.3, k++) for (let y = 1.1; y < WALL_H - 0.3; y += 1.1) LEFT.add(mesh(sph(0.07, 8), '#e6d6f7', { x: -6.99, y: y + (k % 2) * 0.55, z, cast: false }));
+  for (let z = 7.6, k = 0; z < 13; z += 1.3, k++) for (let y = 1.1; y < WALL_H - 0.3; y += 1.1) LEFT.add(
+    mesh(sph(0.07, 8), '#e6d6f7', { x: -6.99, y: y + (k % 2) * 0.55, z, cast: false })
+  );
   // low lavender walls with a doorway from the living room
   const WALL = '#e6dcf7', H = 2.1;
   LEFT.add(mesh(box(6.0, H, 0.2), WALL, { x: -4.0, y: H / 2, z: 7.2 }));
   LEFT.add(mesh(box(3.5, H, 0.2), WALL, { x: 2.25, y: H / 2, z: 7.2 }));
   LEFT.add(mesh(box(0.2, H, 5.9), WALL, { x: 4.0, y: H / 2, z: 10.15 }));
-  [[-4.0, 7.2, 6.1, 0.3], [2.25, 7.2, 3.6, 0.3], [4.0, 10.15, 0.3, 6.0]].forEach(([x, z, w, d]) => LEFT.add(mesh(box(w, 0.1, d), '#d5c8ef', { x, y: H + 0.05, z })));
+  [[-4.0, 7.2, 6.1, 0.3], [2.25, 7.2, 3.6, 0.3], [4.0, 10.15, 0.3, 6.0]].forEach(
+    ([x, z, w, d]) => LEFT.add(mesh(box(w, 0.1, d), '#d5c8ef', { x, y: H + 0.05, z }))
+  );
   // lavender rug with stars
   LEFT.add(mesh(cyl(1.9, 1.9, 0.04, 36), '#d9ccf5', { x: -1.6, y: 0.13, z: 10.4, cast: false, recv: true }));
-  [[-2.3, 9.8], [-0.9, 10.9], [-1.4, 9.4], [-2.0, 11.2]].forEach(([x, z]) => LEFT.add(mesh(cone(0.16, 0.02, 5), '#fff1b0', { x, y: 0.16, z, cast: false })));
+  [[-2.3, 9.8], [-0.9, 10.9], [-1.4, 9.4], [-2.0, 11.2]].forEach(
+    ([x, z]) => LEFT.add(mesh(cone(0.16, 0.02, 5), '#fff1b0', { x, y: 0.16, z, cast: false }))
+  );
   // the bed, headboard against the wall
   const B = { x: -5.3, z: 10.4 };
 
@@ -496,8 +683,16 @@ piece('sofa', LEFT, () => {
     LEFT.add(mesh(box(3.1, 0.34, 2.35), '#fffaf6', { x: B.x + 0.05, y: 0.72, z: B.z }));
     LEFT.add(mesh(box(2.3, 0.16, 2.5), '#ffb3c8', { x: B.x + 0.5, y: 0.9, z: B.z }));
     LEFT.add(mesh(box(0.35, 0.18, 2.52), '#fff1f5', { x: B.x - 0.6, y: 0.92, z: B.z }));
-    for (let i = 0; i < 6; i++) LEFT.add(mesh(sph(0.07, 8), '#ffffff', { x: B.x + 0.0 + (i % 3) * 0.6, y: 0.97, z: B.z - 0.6 + Math.floor(i / 3) * 1.2, s: [1, 0.4, 1], cast: false }));
-    [-0.6, 0.6].forEach(dz => LEFT.add(mesh(sph(0.42, 14), '#fff6fa', { x: -6.3, y: 1.05, z: B.z + dz, s: [0.8, 0.45, 1.25] })));
+    for (let i = 0; i < 6; i++) LEFT.add(
+      mesh(
+        sph(0.07, 8),
+        '#ffffff',
+        { x: B.x + 0.0 + (i % 3) * 0.6, y: 0.97, z: B.z - 0.6 + Math.floor(i / 3) * 1.2, s: [1, 0.4, 1], cast: false }
+      )
+    );
+    [-0.6, 0.6].forEach(
+      dz => LEFT.add(mesh(sph(0.42, 14), '#fff6fa', { x: -6.3, y: 1.05, z: B.z + dz, s: [0.8, 0.45, 1.25] }))
+    );
   });
 
   // plush bear on the pillow
@@ -527,10 +722,14 @@ piece('sofa', LEFT, () => {
   piece('wardrobe', LEFT, () => {
     LEFT.add(mesh(box(1.0, 2.6, 1.8), '#fde4d4', { x: -6.4, y: 1.4, z: 8.3 }));
     LEFT.add(mesh(box(0.03, 2.3, 0.02), '#e9bfa8', { x: -5.89, y: 1.45, z: 8.3, cast: false }));
-    [-0.15, 0.15].forEach(dz => LEFT.add(mesh(sph(0.05, 8), '#ffffff', { x: -5.86, y: 1.5, z: 8.3 + dz, cast: false })));
+    [-0.15, 0.15].forEach(
+      dz => LEFT.add(mesh(sph(0.05, 8), '#ffffff', { x: -5.86, y: 1.5, z: 8.3 + dz, cast: false }))
+    );
   });
 
-  [-0.18, 0.18].forEach(dz => LEFT.add(mesh(sph(0.14, 10), '#ffc4d6', { x: -3.4, y: 0.17, z: 11.3 + dz, s: [1.6, 0.5, 0.8] })));
+  [-0.18, 0.18].forEach(
+    dz => LEFT.add(mesh(sph(0.14, 10), '#ffc4d6', { x: -3.4, y: 0.17, z: 11.3 + dz, s: [1.6, 0.5, 0.8] }))
+  );
   // a little star mobile that slowly turns
   const mobile = new THREE.Group(); mobile.position.set(-4.4, 2.9, B.z); LEFT.add(mobile);
   mobile.add(mesh(cyl(0.01, 0.01, 1.2, 4), '#8a7a80', { rz: PI / 2, cast: false }));
@@ -545,7 +744,13 @@ piece('sofa', LEFT, () => {
 
 // ---------- plant balcony (front right, in front of the bathroom) ----------
 {
-  for (let i = 0; i < 8; i++) scene.add(mesh(box(0.95, 0.12, 4.3), i % 2 ? '#e3c3a2' : '#d9b48e', { x: 6.5 + i * 0.975, y: 0.06, z: 9.25, cast: false, recv: true }));
+  for (let i = 0; i < 8; i++) scene.add(
+    mesh(
+      box(0.95, 0.12, 4.3),
+      i % 2 ? '#e3c3a2' : '#d9b48e',
+      { x: 6.5 + i * 0.975, y: 0.06, z: 9.25, cast: false, recv: true }
+    )
+  );
 
   // low planter boxes between the bathroom and the balcony, so the bathroom stays in view
   piece('planters', scene, () => {
@@ -553,8 +758,18 @@ piece('sofa', LEFT, () => {
       const x = 8.2 + i * 1.6;
       scene.add(mesh(box(1.45, 0.5, 0.45), '#fff6ef', { x, y: 0.3, z: 7.2 }));
       scene.add(mesh(box(1.35, 0.06, 0.36), '#a8724e', { x, y: 0.56, z: 7.2, cast: false }));
-      for (let k = 0; k < 4; k++) scene.add(mesh(sph(0.15 + (k % 2) * 0.04, 10), k % 3 ? '#9fd49a' : '#8ccf8a', { x: x - 0.5 + k * 0.33, y: 0.68, z: 7.2 }));
-      [-0.35, 0.3].forEach((dx, k) => scene.add(mesh(sph(0.07, 8), ['#ff9fb5', '#ffd27a', '#c3a3f0', '#ffffff'][(i + k) % 4], { x: x + dx, y: 0.86, z: 7.25, cast: false })));
+      for (let k = 0; k < 4; k++) scene.add(
+        mesh(sph(0.15 + (k % 2) * 0.04, 10), k % 3 ? '#9fd49a' : '#8ccf8a', { x: x - 0.5 + k * 0.33, y: 0.68, z: 7.2 })
+      );
+      [-0.35, 0.3].forEach(
+        (dx, k) => scene.add(
+          mesh(
+            sph(0.07, 8),
+            ['#ff9fb5', '#ffd27a', '#c3a3f0', '#ffffff'][(i + k) % 4],
+            { x: x + dx, y: 0.86, z: 7.25, cast: false }
+          )
+        )
+      );
     }
   });
 
@@ -563,16 +778,26 @@ piece('sofa', LEFT, () => {
   rail(9.9, 11.45, 7.8, 0.1); rail(13.75, 9.3, 0.1, 4.3);
   for (let x = 6.1; x <= 13.8; x += 0.55) scene.add(mesh(box(0.07, 0.85, 0.07), '#ffffff', { x, y: 0.5, z: 11.45 }));
   for (let z = 7.6; z < 11.4; z += 0.55) scene.add(mesh(box(0.07, 0.85, 0.07), '#ffffff', { x: 13.75, y: 0.5, z }));
-  for (let i = 0; i < 16; i++) scene.add(mesh(sph(0.055, 8), '', { x: 6.3 + i * 0.47, y: 1.05 - Math.abs(Math.sin(i * 0.9)) * 0.08, z: 11.5, mat: bulbMat, cast: false }));
+  for (let i = 0; i < 16; i++) scene.add(
+    mesh(
+      sph(0.055, 8),
+      '',
+      { x: 6.3 + i * 0.47, y: 1.05 - Math.abs(Math.sin(i * 0.9)) * 0.08, z: 11.5, mat: bulbMat, cast: false }
+    )
+  );
 
   // a big leafy plant in the corner, a little lemon tree and some small pots
   piece('balconyplants', scene, () => {
     scene.add(mesh(cyl(0.42, 0.32, 0.7, 16), '#f49a91', { x: 13.1, y: 0.4, z: 10.8 }));
-    [[0, 1.2, 0, 0.55], [0.3, 1.65, -0.1, 0.42], [-0.25, 1.55, 0.15, 0.4], [0.05, 2.0, 0.05, 0.32]].forEach(([dx, y, dz, r]) => scene.add(mesh(sph(r, 14), '#7cc68a', { x: 13.1 + dx, y, z: 10.8 + dz })));
+    [[0, 1.2, 0, 0.55], [0.3, 1.65, -0.1, 0.42], [-0.25, 1.55, 0.15, 0.4], [0.05, 2.0, 0.05, 0.32]].forEach(
+      ([dx, y, dz, r]) => scene.add(mesh(sph(r, 14), '#7cc68a', { x: 13.1 + dx, y, z: 10.8 + dz }))
+    );
     scene.add(mesh(cyl(0.3, 0.24, 0.5, 14), '#c3e3dd', { x: 6.7, y: 0.3, z: 10.9 }));
     scene.add(mesh(cyl(0.04, 0.05, 0.6, 6), '#b88a62', { x: 6.7, y: 0.8, z: 10.9 }));
     scene.add(mesh(sph(0.45, 14), '#9fd49a', { x: 6.7, y: 1.3, z: 10.9 }));
-    [[6.45, 1.2, 11.2], [6.95, 1.45, 10.95], [6.6, 1.55, 10.6], [6.9, 1.1, 10.6]].forEach(([x, y, z]) => scene.add(mesh(sph(0.08, 8), '#ffd23f', { x, y, z, cast: false })));
+    [[6.45, 1.2, 11.2], [6.95, 1.45, 10.95], [6.6, 1.55, 10.6], [6.9, 1.1, 10.6]].forEach(
+      ([x, y, z]) => scene.add(mesh(sph(0.08, 8), '#ffd23f', { x, y, z, cast: false }))
+    );
 
     [[8.0, 11.05, '#ffc4d6'], [12.0, 11.05, '#b5ccff'], [13.3, 8.0, '#ffd27a']].forEach(([x, z, c]) => {
       scene.add(mesh(cyl(0.18, 0.14, 0.3, 12), c, { x, y: 0.27, z }));
@@ -582,10 +807,14 @@ piece('sofa', LEFT, () => {
 
   // two squishy bean bags and a little table with mugs
   piece('beanbags', scene, () => {
-    [[9.2, '#ffc4d6'], [10.8, '#b5ccff']].forEach(([x, c]) => scene.add(mesh(sph(0.55, 18), c, { x, y: 0.3, z: 9.7, s: [1.1, 0.55, 1.1] })));
+    [[9.2, '#ffc4d6'], [10.8, '#b5ccff']].forEach(
+      ([x, c]) => scene.add(mesh(sph(0.55, 18), c, { x, y: 0.3, z: 9.7, s: [1.1, 0.55, 1.1] }))
+    );
     scene.add(mesh(cyl(0.3, 0.3, 0.06, 18), '#fff6ef', { x: 10.0, y: 0.5, z: 10.5 }));
     scene.add(mesh(cyl(0.05, 0.07, 0.4, 8), '#e2b088', { x: 10.0, y: 0.28, z: 10.5 }));
-    [[-0.1, '#ff9fb5'], [0.12, '#8fc1f0']].forEach(([dx, c]) => scene.add(mesh(cyl(0.06, 0.05, 0.12, 10), c, { x: 10.0 + dx, y: 0.59, z: 10.5 })));
+    [[-0.1, '#ff9fb5'], [0.12, '#8fc1f0']].forEach(
+      ([dx, c]) => scene.add(mesh(cyl(0.06, 0.05, 0.12, 10), c, { x: 10.0 + dx, y: 0.59, z: 10.5 }))
+    );
   });
 
   // watering can
@@ -606,7 +835,13 @@ piece('sofa', LEFT, () => {
     const dt = Math.min(0.05, (t - last) / 1000); last = t;
     lines.visible = !!(window.isRaining && isRaining());
     if (!lines.visible) return;
-    drops.forEach((d, i) => { d[1] -= dt * 12; if (d[1] < 0.1) d[1] += 4.9; pos.set([d[0], d[1], d[2], d[0] - 0.04, d[1] - 0.4, d[2] - 0.04], i * 6); });
+    drops.forEach(
+      (d, i) => {
+        d[1] -= dt * 12;
+        if (d[1] < 0.1) d[1] += 4.9;
+        pos.set([d[0], d[1], d[2], d[0] - 0.04, d[1] - 0.4, d[2] - 0.04], i * 6);
+      }
+    );
     geo.attributes.position.needsUpdate = true;
   });
 }
@@ -624,27 +859,51 @@ const ISLAND = { x: 4.3, z: 2.75, hw: 11.2, hd: 11.45 };
   const isl = makeFloatingIsland({ hw: ISLAND.hw, hd: ISLAND.hd, r: 2.2, depth: 15, seed: 21 });
   isl.position.set(ISLAND.x, 0, ISLAND.z); scene.add(isl);
   // where the house stands (walls, bedroom, balcony), so the garden stays outside it
-  const indoors = (x, z) => (x > -5.6 && x < 14.1 && z > -7.5 && z < 7.2) || (x > -5.6 && x < 6.2 && z < 13.4) || (x > 5.8 && x < 14.1 && z < 11.8);
+  const indoors = (x, z) => (x > -5.6 && x < 14.1 && z > -7.5 && z < 7.2) || (x > -5.6 && x < 6.2 && z < 13.4)
+    || (x > 5.8 && x < 14.1 && z < 11.8);
   const onIsland = (x, z, m) => Math.abs(x - ISLAND.x) < ISLAND.hw - m && Math.abs(z - ISLAND.z) < ISLAND.hd - m;
-  const gr = rng(77), spot = m => { for (let k = 0; k < 80; k++) { const x = ISLAND.x + (gr() * 2 - 1) * ISLAND.hw, z = ISLAND.z + (gr() * 2 - 1) * ISLAND.hd; if (onIsland(x, z, m) && !indoors(x, z)) return [x, z]; } return null; };
-  for (let i = 0; i < 90; i++) { const p = spot(0.35); if (p) scene.add(mesh(sph(0.07, 6), ['#ff9fb5', '#ffffff', '#ffd27a', '#c3a3f0'][i % 4], { x: p[0], y: 0.1, z: p[1], cast: false })); }
+  const gr = rng(
+    77
+  ), spot = m => {
+    for (let k = 0; k < 80; k++) {
+      const x = ISLAND.x + (gr() * 2 - 1) * ISLAND.hw, z = ISLAND.z + (gr() * 2 - 1) * ISLAND.hd;
+      if (onIsland(x, z, m) && !indoors(x, z)) return [x, z];
+    }
+    return null;
+  };
+  for (let i = 0; i < 90; i++) {
+    const p = spot(0.35);
+    if (p) scene.add(
+      mesh(sph(0.07, 6), ['#ff9fb5', '#ffffff', '#ffd27a', '#c3a3f0'][i % 4], { x: p[0], y: 0.1, z: p[1], cast: false })
+    );
+  }
 
   for (let i = 0; i < 12; i++) {
     const p = spot(0.6); if (!p) continue;
     const b = new THREE.Group(); b.position.set(p[0], 0.05, p[1]); b.scale.setScalar(0.7 + gr() * 0.4); scene.add(b);
-    [[0, 0.3, 0, 0.36], [0.25, 0.24, 0.1, 0.26], [-0.22, 0.22, -0.05, 0.25]].forEach(([dx, y, dz, r], k) => b.add(mesh(sph(r, 12), k ? '#8cc786' : '#9fd49a', { x: dx, y, z: dz })));
-    if (i % 2) [[0.1, 0.55, 0.2], [-0.2, 0.42, 0.18], [0.3, 0.38, -0.1]].forEach(([dx, y, dz]) => b.add(mesh(sph(0.05, 6), '#ffb3c8', { x: dx, y, z: dz, cast: false })));
+    [[0, 0.3, 0, 0.36], [0.25, 0.24, 0.1, 0.26], [-0.22, 0.22, -0.05, 0.25]].forEach(
+      ([dx, y, dz, r], k) => b.add(mesh(sph(r, 12), k ? '#8cc786' : '#9fd49a', { x: dx, y, z: dz }))
+    );
+    if (i % 2) [[0.1, 0.55, 0.2], [-0.2, 0.42, 0.18], [0.3, 0.38, -0.1]].forEach(
+      ([dx, y, dz]) => b.add(mesh(sph(0.05, 6), '#ffb3c8', { x: dx, y, z: dz, cast: false }))
+    );
   }
 
   // the front-right corner garden: a blossom tree, toadstools and a lamp
   const tree = new THREE.Group(); tree.position.set(13.4, 0.05, 12.9); scene.add(tree);
   tree.add(mesh(cyl(0.14, 0.2, 1.3, 8), '#c9a27e', { y: 0.65 }));
-  [[0, 1.65, 0, 0.75], [0.45, 1.5, 0.2, 0.5], [-0.4, 1.45, -0.1, 0.52], [0.1, 2.1, -0.1, 0.5]].forEach(([dx, y, dz, r]) => tree.add(mesh(sph(r, 14), '#ffc4d6', { x: dx, y, z: dz })));
+  [[0, 1.65, 0, 0.75], [0.45, 1.5, 0.2, 0.5], [-0.4, 1.45, -0.1, 0.52], [0.1, 2.1, -0.1, 0.5]].forEach(
+    ([dx, y, dz, r]) => tree.add(mesh(sph(r, 14), '#ffc4d6', { x: dx, y, z: dz }))
+  );
 
   [[8.3, 13.1, 0.9], [8.9, 13.5, 0.6], [11.2, 13.3, 0.75]].forEach(([x, z, sc]) => {
     scene.add(mesh(cyl(0.09 * sc, 0.12 * sc, 0.35 * sc, 10), '#fff6e8', { x, y: 0.05 + 0.17 * sc, z }));
-    scene.add(mesh(new THREE.SphereGeometry(0.3 * sc, 16, 8, 0, PI * 2, 0, PI / 2), '#ff8fab', { x, y: 0.05 + 0.33 * sc, z }));
-    scene.add(mesh(sph(0.05 * sc, 6), '#ffffff', { x: x + 0.1 * sc, y: 0.05 + 0.55 * sc, z: z + 0.1 * sc, cast: false }));
+    scene.add(
+      mesh(new THREE.SphereGeometry(0.3 * sc, 16, 8, 0, PI * 2, 0, PI / 2), '#ff8fab', { x, y: 0.05 + 0.33 * sc, z })
+    );
+    scene.add(
+      mesh(sph(0.05 * sc, 6), '#ffffff', { x: x + 0.1 * sc, y: 0.05 + 0.55 * sc, z: z + 0.1 * sc, cast: false })
+    );
   });
 
   scene.add(mesh(cyl(0.05, 0.07, 1.6, 8), '#8a7a80', { x: 15.0, y: 0.85, z: 8.5 }));
@@ -675,11 +934,18 @@ const ISLAND = { x: 4.3, z: 2.75, hw: 11.2, hd: 11.45 };
 {
   const cloudMat = new THREE.MeshBasicMaterial({ color: '#ffffff', transparent: true, opacity: 0 });
 
-  [[scene, 2.6, 2.75, -6.825, 2.0, 'x', 0], [scene, 2.6, 3.15, -6.825, 2.0, 'x', 0.55], [LEFT, -6.825, 3.05, 10.4, 1.4, 'z', 0.3]].forEach(([parent, cx, cy, cz, w, along, ph]) => {
+  [
+    [scene, 2.6, 2.75, -6.825, 2.0, 'x', 0],
+    [scene, 2.6, 3.15, -6.825, 2.0, 'x', 0.55],
+    [LEFT, -6.825, 3.05, 10.4, 1.4, 'z', 0.3]
+  ].forEach(([parent, cx, cy, cz, w, along, ph]) => {
     const c = new THREE.Group(); parent.add(c);
 
     [[0, 0, 0.13], [0.13, -0.02, 0.1], [-0.13, -0.02, 0.1], [0.05, 0.08, 0.09]].forEach(([dx, dy, r]) => {
-      const m = new THREE.Mesh(new THREE.CircleGeometry(r, 14), cloudMat); m.position.set(along === 'x' ? dx : 0, dy, along === 'x' ? 0 : dx);
+      const m = new THREE.Mesh(
+        new THREE.CircleGeometry(r, 14),
+        cloudMat
+      ); m.position.set(along === 'x' ? dx : 0, dy, along === 'x' ? 0 : dx);
       if (along === 'z') m.rotation.y = PI / 2;
       c.add(m);
     });
@@ -698,7 +964,10 @@ const WET_SKY = new THREE.Color('#9aa0b4'), WET_NIGHT = new THREE.Color('#1c1f36
 const streakMat = new THREE.MeshBasicMaterial({ color: '#e8f4ff', transparent: true, opacity: 0.8 });
 const streaks = [];
 
-[[scene, 2.6, 2.75, -6.815, 2.2, 1.65, 'x'], [LEFT, -6.815, 3.0, 10.4, 1.6, 1.1, 'z']].forEach(([parent, cx, cy, cz, w, h, along]) => {
+[
+  [scene, 2.6, 2.75, -6.815, 2.2, 1.65, 'x'],
+  [LEFT, -6.815, 3.0, 10.4, 1.6, 1.1, 'z']
+].forEach(([parent, cx, cy, cz, w, h, along]) => {
   for (let i = 0; i < 12; i++) {
     const m = new THREE.Mesh(box(along === 'x' ? 0.025 : 0.01, 0.16, along === 'x' ? 0.01 : 0.025), streakMat);
     m.userData = { cx, cy, cz, w, h, along, u: rand() - 0.5, k: rand(), sp: 0.35 + rand() * 0.3 };
@@ -708,7 +977,10 @@ const streaks = [];
 
 animated.push(t => {
   const dk = darkness(hourNow()), wet = window.wetness ? wetness() : 0, raining = window.isRaining && isRaining();
-  skyMat.color.set(dk > 0.6 ? '#22285a' : dk > 0.1 ? '#ffae80' : '#9fd8ff').lerp(dk > 0.6 ? WET_NIGHT : WET_SKY, wet * 0.75);
+  skyMat.color.set(dk > 0.6 ? '#22285a' : dk > 0.1 ? '#ffae80' : '#9fd8ff').lerp(
+    dk > 0.6 ? WET_NIGHT : WET_SKY,
+    wet * 0.75
+  );
   sunMoon.material.color.set(dk > 0.6 ? '#fff6c8' : '#ffe08a');
   sunMoon.visible = wet < 0.7;
 
@@ -750,7 +1022,11 @@ function makeMiw() {
   }
 
   body.add(mesh(sph(0.045, 10), '#ffffff', { y: 0.62, z: 0.16, s: [1, 0.9, 0.5], cast: false }));
-  [-1, 1].forEach(sd => body.add(mesh(sph(0.018, 6), '#ffffff', { x: sd * 0.018, y: 0.665, z: 0.155, s: [0.7, 1.6, 0.6], cast: false })));
+  [-1, 1].forEach(
+    sd => body.add(
+      mesh(sph(0.018, 6), '#ffffff', { x: sd * 0.018, y: 0.665, z: 0.155, s: [0.7, 1.6, 0.6], cast: false })
+    )
+  );
 
   // arms reaching out a little, like in the picture
   [-1, 1].forEach(sd => {
@@ -764,8 +1040,19 @@ function makeMiw() {
   head.add(mesh(sph(0.36, 24), SKIN, { s: [1.05, 0.95, 0.95] }));
   [-1, 1].forEach(sd => head.add(mesh(sph(0.07, 10), SKIN, { x: sd * 0.37, y: -0.03 })));
   head.add(mesh(sph(0.37, 24), HAIR, { y: 0.03, z: -0.09 }));
-  head.add(mesh(new THREE.SphereGeometry(0.4, 28, 16, 0, PI * 2, 0, PI * 0.4), HAIR, { y: 0.03, z: -0.03, rx: 0.05, cast: false }));
-  [[-0.21, 0.2], [-0.07, 0.24], [0.07, 0.24], [0.21, 0.2]].forEach(([x, y], i) => head.add(mesh(sph(0.1, 10), i % 2 ? HAIR : HAIR_DK, { x, y, z: 0.26, s: [1, 0.6, 0.45], cast: false })));
+  head.add(
+    mesh(
+      new THREE.SphereGeometry(0.4, 28, 16, 0, PI * 2, 0, PI * 0.4),
+      HAIR,
+      { y: 0.03, z: -0.03, rx: 0.05, cast: false }
+    )
+  );
+  [[-0.21, 0.2], [-0.07, 0.24], [0.07, 0.24], [0.21, 0.2]].forEach(
+    ([
+      x,
+      y
+    ], i) => head.add(mesh(sph(0.1, 10), i % 2 ? HAIR : HAIR_DK, { x, y, z: 0.26, s: [1, 0.6, 0.45], cast: false }))
+  );
 
   // face: big eyes, pink glasses, blush and an open smile
   [-1, 1].forEach(sd => {
@@ -782,7 +1069,15 @@ function makeMiw() {
   // two braids hanging behind the ears
   [-1, 1].forEach(sd => {
     head.add(mesh(sph(0.045, 8), '#7a2e10', { x: sd * 0.33, y: -0.16, z: -0.06 }));
-    [0.1, 0.095, 0.088, 0.078, 0.065].forEach((r, i) => head.add(mesh(sph(r, 12), i % 2 ? HAIR : HAIR_DK, { x: sd * (0.35 + i * 0.012), y: -0.25 - i * 0.12, z: -0.07, s: [1, 1.15, 1] })));
+    [0.1, 0.095, 0.088, 0.078, 0.065].forEach(
+      (r, i) => head.add(
+        mesh(
+          sph(r, 12),
+          i % 2 ? HAIR : HAIR_DK,
+          { x: sd * (0.35 + i * 0.012), y: -0.25 - i * 0.12, z: -0.07, s: [1, 1.15, 1] }
+        )
+      )
+    );
     head.add(mesh(cone(0.05, 0.1, 10), HAIR_DK, { x: sd * 0.41, y: -0.88, z: -0.07, rx: PI }));
   });
 
@@ -805,9 +1100,13 @@ function makeMiw() {
 // each viewer's pick per agent (plus an optional default), shared by the town and the room
 const SPECIES_KEY = 'miw-town-species';
 let speciesStore = {};
-const loadSpecies = () => { try { speciesStore = JSON.parse(localStorage.getItem(SPECIES_KEY) || '{}'); } catch { speciesStore = {}; } };
+const loadSpecies = () => {
+  try { speciesStore = JSON.parse(localStorage.getItem(SPECIES_KEY) || '{}'); } catch { speciesStore = {}; }
+};
 const saveSpecies = () => { try { localStorage.setItem(SPECIES_KEY, JSON.stringify(speciesStore)); } catch {} };
-const speciesOf = id => SPECIES[speciesStore[id]] ? speciesStore[id] : SPECIES[speciesStore._default] ? speciesStore._default : 'cat';
+const speciesOf = id => SPECIES[speciesStore[id]]
+  ? speciesStore[id]
+  : SPECIES[speciesStore._default] ? speciesStore._default : 'cat';
 
 loadSpecies();
 
@@ -824,7 +1123,9 @@ function makeCharacter(species, color) {
     head.add(mesh(sph(r * 0.36, 6), '#ffffff', { x: sd * gap + 0.015, y: y + 0.02, z: z + r * 0.9, cast: false }));
   });
 
-  const cheeks = (y = -0.08, z = 0.25, gap = 0.21) => [-1, 1].forEach(sd => head.add(mesh(sph(0.055, 10), '#ff9bb0', { x: sd * gap, y, z, s: [1, 0.6, 0.5], cast: false })));
+  const cheeks = (y = -0.08, z = 0.25, gap = 0.21) => [-1, 1].forEach(
+    sd => head.add(mesh(sph(0.055, 10), '#ff9bb0', { x: sd * gap, y, z, s: [1, 0.6, 0.5], cast: false }))
+  );
   const beak = (y, z) => head.add(mesh(cone(0.065, 0.14, 10), '#ffa94d', { y, z, rx: PI / 2, cast: false }));
   let skin = color, belly = '#fff4e0', foot = color, headShape = [1.08, 0.95, 1], bellyShape = [1, 1, 0.6];
 
@@ -841,7 +1142,13 @@ function makeCharacter(species, color) {
     case 'cat':
       [-1, 1].forEach(sd => {
         head.add(mesh(cone(0.12, 0.22, 4), skin, { x: sd * 0.2, y: 0.28, rz: -sd * 0.35, ry: PI / 4 }));
-        head.add(mesh(cone(0.06, 0.12, 4), '#ff9bb0', { x: sd * 0.2, y: 0.27, z: 0.04, rz: -sd * 0.35, ry: PI / 4, cast: false }));
+        head.add(
+          mesh(
+            cone(0.06, 0.12, 4),
+            '#ff9bb0',
+            { x: sd * 0.2, y: 0.27, z: 0.04, rz: -sd * 0.35, ry: PI / 4, cast: false }
+          )
+        );
       });
 
       eyes(); cheeks();
@@ -852,7 +1159,13 @@ function makeCharacter(species, color) {
     case 'bunny':
       [-1, 1].forEach(sd => {
         head.add(mesh(sph(0.1, 12), skin, { x: sd * 0.13, y: 0.45, z: -0.02, rz: -sd * 0.12, s: [0.85, 2.5, 0.6] }));
-        head.add(mesh(sph(0.06, 10), '#ffc4d6', { x: sd * 0.13, y: 0.45, z: 0.03, rz: -sd * 0.12, s: [0.8, 2.6, 0.4], cast: false }));
+        head.add(
+          mesh(
+            sph(0.06, 10),
+            '#ffc4d6',
+            { x: sd * 0.13, y: 0.45, z: 0.03, rz: -sd * 0.12, s: [0.8, 2.6, 0.4], cast: false }
+          )
+        );
       });
 
       eyes(0.03); cheeks();
@@ -879,26 +1192,47 @@ function makeCharacter(species, color) {
       });
 
       cheeks(-0.06, 0.27, 0.26);
-      head.add(mesh(new THREE.TorusGeometry(0.11, 0.016, 6, 16, PI), '#4b3442', { y: -0.02, z: 0.3, rz: PI, cast: false }));
+      head.add(
+        mesh(new THREE.TorusGeometry(0.11, 0.016, 6, 16, PI), '#4b3442', { y: -0.02, z: 0.3, rz: PI, cast: false })
+      );
       break;
     case 'chick':
       eyes(0.04, 0.29, 0.13, 0.045); cheeks(-0.06, 0.25, 0.22);
       beak(-0.05, 0.33);
-      [[-0.06, 0.34, 0.3], [0.04, 0.37, -0.2], [0.12, 0.32, -0.6]].forEach(([x, y, rz]) => head.add(mesh(sph(0.06, 8), skin, { x, y, rz, s: [0.6, 1.4, 0.6] })));
-      [-1, 1].forEach(sd => body.add(mesh(sph(0.13, 10), skin, { x: sd * 0.33, y: 0.4, rz: sd * 0.5, s: [0.45, 1, 0.8] })));
+      [[-0.06, 0.34, 0.3], [0.04, 0.37, -0.2], [0.12, 0.32, -0.6]].forEach(
+        ([x, y, rz]) => head.add(mesh(sph(0.06, 8), skin, { x, y, rz, s: [0.6, 1.4, 0.6] }))
+      );
+      [-1, 1].forEach(
+        sd => body.add(mesh(sph(0.13, 10), skin, { x: sd * 0.33, y: 0.4, rz: sd * 0.5, s: [0.45, 1, 0.8] }))
+      );
       tail.add(mesh(cone(0.08, 0.16, 8), skin, { y: 0.02, z: -0.05, rx: -2.2 }));
       break;
     case 'penguin':
       head.add(mesh(sph(0.26, 16), '#ffffff', { y: -0.04, z: 0.12, s: [1.1, 0.9, 0.8], cast: false }));
       eyes(0.03, 0.31, 0.11, 0.045); cheeks(-0.08, 0.27, 0.2);
       beak(-0.06, 0.35);
-      [-1, 1].forEach(sd => body.add(mesh(sph(0.14, 10), skin, { x: sd * 0.34, y: 0.38, rz: sd * 0.35, s: [0.35, 1.2, 0.7] })));
+      [-1, 1].forEach(
+        sd => body.add(mesh(sph(0.14, 10), skin, { x: sd * 0.34, y: 0.38, rz: sd * 0.35, s: [0.35, 1.2, 0.7] }))
+      );
       tail.add(mesh(cone(0.08, 0.14, 8), skin, { y: -0.08, z: 0, rx: -2.4 }));
       break;
   }
 
   const feet = [-1, 1].map(sd => {
-    const f = mesh(sph(0.1, 10), foot, { x: sd * 0.14, y: 0.07, z: 0.1, s: species === 'chick' || species === 'penguin' || species === 'frog' ? [1.2, 0.6, 1.4] : species === 'bunny' ? [1, 0.75, 1.5] : 1 });
+    const f = mesh(
+      sph(0.1, 10),
+      foot,
+      {
+        x: sd * 0.14,
+        y: 0.07,
+        z: 0.1,
+        s: species === 'chick' || species === 'penguin' || species === 'frog' ? [
+          1.2,
+          0.6,
+          1.4
+        ] : species === 'bunny' ? [1, 0.75, 1.5] : 1
+      }
+    );
     g.add(f); return f;
   });
 
@@ -935,7 +1269,10 @@ function upsert(a) {
     const color = COLORS[colorIdx++ % COLORS.length], species = speciesOf(a.id);
     const cat = makeCharacter(species, color);
     // new cats walk in from the open front of the room
-    me = { id: a.id, cat, color, species, px: 1.55 + (Math.random() - 0.5) * 1.0, pz: 7.2, route: [], target: null, atPlace: null, state };
+    me = {
+      id: a.id, cat, color, species, px: 1.55 + (Math.random() - 0.5) * 1.0, pz: 7.2, route: [], target: null,
+      atPlace: null, state
+    };
     cat.g.position.set(me.px, 0.12, me.pz); cat.g.scale.setScalar(0.001);
     scene.add(cat.g);
     me.tag = Object.assign(document.createElement('div'), { className: 'lbl tag' });
@@ -947,7 +1284,10 @@ function upsert(a) {
 
   if (me.state !== state || me.msg !== a.msg) {
     me.changedAt = performance.now();
-    if (me.state !== state || !xpStore[me.id]) { xpStore[me.id] = (xpStore[me.id] || 0) + (state === 'idle' ? 25 : 10); saveXp(); }
+    if (me.state !== state || !xpStore[me.id]) {
+      xpStore[me.id] = (xpStore[me.id] || 0) + (state === 'idle' ? 25 : 10);
+      saveXp();
+    }
   }
 
   me.realName = a.name || a.id;
@@ -956,7 +1296,10 @@ function upsert(a) {
 }
 
 function removeMissing(ids) {
-  for (const [id, me] of agents) if (!ids.has(id)) { scene.remove(me.cat.g); me.tag.remove(); me.bubble.remove(); agents.delete(id); }
+  for (const [
+    id,
+    me
+  ] of agents) if (!ids.has(id)) { scene.remove(me.cat.g); me.tag.remove(); me.bubble.remove(); agents.delete(id); }
 }
 
 const lvl = xp => 1 + Math.floor(Math.sqrt((xp || 0) / 20));
@@ -964,10 +1307,20 @@ const lvl = xp => 1 + Math.floor(Math.sqrt((xp || 0) / 20));
 // resting agents drift between the sofa, the kitchen table, the bathtub, the bed and the balcony
 const REST = [
   PLACES.idle,
-  { x: 9.3, z: -1.2, sx: 1, sz: 0, y: 0.55, face: null, seats: [[8.25, -2.6], [10.35, -2.6]], via: [[6.0, 0.9], [9.3, -1.2]], w: 0.3 },
-  { x: 9.4, z: 3.4, sx: 1, sz: 0, y: 0.3, face: null, seats: [[10.8, 5.2], [12.0, 5.2]], via: [[6.2, 3.85], [8.7, 3.85]] },
-  { x: -0.6, z: 9.4, sx: 1, sz: 0, y: 0.92, face: PI / 2, seats: [[-3.2, 9.8], [-3.2, 11.0]], via: [[1.55, 6.4], [1.55, 8.2]] },
-  { x: 10.0, z: 8.3, sx: 1, sz: 0, y: 0.45, face: null, seats: [[9.2, 9.7], [10.8, 9.7]], via: [[6.6, 6.0], [6.6, 8.2]] },
+  {
+    x: 9.3, z: -1.2, sx: 1, sz: 0, y: 0.55, face: null, seats: [[8.25, -2.6], [10.35, -2.6]],
+    via: [[6.0, 0.9], [9.3, -1.2]], w: 0.3
+  },
+  {
+    x: 9.4, z: 3.4, sx: 1, sz: 0, y: 0.3, face: null, seats: [[10.8, 5.2], [12.0, 5.2]], via: [[6.2, 3.85], [8.7, 3.85]]
+  },
+  {
+    x: -0.6, z: 9.4, sx: 1, sz: 0, y: 0.92, face: PI / 2, seats: [[-3.2, 9.8], [-3.2, 11.0]],
+    via: [[1.55, 6.4], [1.55, 8.2]]
+  },
+  {
+    x: 10.0, z: 8.3, sx: 1, sz: 0, y: 0.45, face: null, seats: [[9.2, 9.7], [10.8, 9.7]], via: [[6.6, 6.0], [6.6, 8.2]]
+  },
 ];
 
 // sofa, kitchen, bath, bed, balcony: the bed wins at night, and nobody sits out in the rain
@@ -982,7 +1335,11 @@ const stationOf = (state, rest) => state === 'idle' ? REST[rest || 0] : PLACES[s
 function pickRest(me, different) {
   let k;
   const w = restWeights();
-  do { let r = Math.random(); k = 0; while (k < w.length - 1 && (r -= w[k]) > 0) k++; } while (different && k === me.rest);
+  do {
+    let r = Math.random();
+    k = 0;
+    while (k < w.length - 1 && (r -= w[k]) > 0) k++;
+  } while (different && k === me.rest);
   me.rest = k;
 }
 
@@ -1018,7 +1375,10 @@ function stepAgent(me, dt, t) {
   g.scale.setScalar(CAT_SCALE * (born < 1 ? 0.2 + 0.8 * Math.sin(born * PI / 2) * (1 + Math.sin(born * PI) * 0.2) : 1));
 
   if (me.target !== me.state) { if (me.state === 'idle') pickRest(me); planRoute(me); }
-  else if (me.state === 'idle' && me.atPlace === 'idle' && performance.now() > me.restUntil) { pickRest(me, true); planRoute(me); }
+  else if (me.state === 'idle' && me.atPlace === 'idle' && performance.now() > me.restUntil) {
+    pickRest(me, true);
+    planRoute(me);
+  }
 
   const spot = spotOf(me);
   if (me.route.length) me.route[me.route.length - 1] = spot.slice(0, 2);
@@ -1032,7 +1392,11 @@ function stepAgent(me, dt, t) {
 
     if (d <= step) {
       me.px = tx; me.pz = tz; me.route.shift();
-      if (!me.route.length) { me.atPlace = me.state; me.atRest = me.rest; me.restUntil = performance.now() + 25000 + Math.random() * 20000; }
+      if (!me.route.length) {
+        me.atPlace = me.state;
+        me.atRest = me.rest;
+        me.restUntil = performance.now() + 25000 + Math.random() * 20000;
+      }
     } else { me.px += dx / d * step; me.pz += dz / d * step; }
 
     walking = me.route.length > 0;
@@ -1047,7 +1411,10 @@ function stepAgent(me, dt, t) {
   // a happy hop right after being petted
   if (me.petAt) { const k = (performance.now() - me.petAt) / 600; if (k < 1) g.position.y += Math.sin(k * PI) * 0.6; }
 
-  const face = walking ? dir : P.face != null && seat ? P.face : Math.atan2(camera.position.x - me.px, camera.position.z - me.pz);
+  const face = walking ? dir : P.face != null && seat ? P.face : Math.atan2(
+    camera.position.x - me.px,
+    camera.position.z - me.pz
+  );
   g.rotation.y += angDiff(g.rotation.y, face) * Math.min(1, dt * 8);
 
   // body language
@@ -1099,7 +1466,14 @@ const placeLabels = Object.entries(PLACES).map(([k, P]) => {
 [['🍳', 'Kitchen', [9.3, 4.2, -6.6], '#ffe6dc', 1, 'Snack breaks at the little round table.'],
  ['🛁', 'Bathroom', [11.2, 2.8, 3.6], '#dcecfb', 2, 'Bubble baths for tired friends.'],
  ['🛏️', 'Bedroom', [-0.2, 2.8, 9.0], '#ece5ff', 3, 'Naps, and a good sleep at night.'],
- ['🪴', 'Balcony', [10.0, 2.4, 9.3], '#e3f5e1', 4, 'Fresh air among the plants. Empty when it rains.']].forEach(([icon, name, pos, tint, rest, desc]) => {
+ [
+   '🪴',
+   'Balcony',
+   [10.0, 2.4, 9.3],
+   '#e3f5e1',
+   4,
+   'Fresh air among the plants. Empty when it rains.'
+ ]].forEach(([icon, name, pos, tint, rest, desc]) => {
   const el = Object.assign(document.createElement('div'), { className: 'lbl place' });
   const ic = Object.assign(document.createElement('i'), { textContent: icon });
   ic.style.setProperty('--c', tint);
@@ -1123,7 +1497,15 @@ Object.entries(PLACES).forEach(([k, P]) => {
 });
 
 function drawLabels() {
-  placeLabels.forEach(([el, P]) => { const [x, y] = toScreen(P.labelPos); el.style.transform = `translate(${x}px,${y}px) translate(-50%,-100%)`; });
+  placeLabels.forEach(
+    ([
+      el,
+      P
+    ]) => {
+      const [x, y] = toScreen(P.labelPos);
+      el.style.transform = `translate(${x}px,${y}px) translate(-50%,-100%)`;
+    }
+  );
 
   for (const me of agents.values()) {
     const p = me.cat.g.position;
@@ -1131,7 +1513,10 @@ function drawLabels() {
     const [fx, fy] = toScreen(v3.set(p.x, p.y - 0.15, p.z));
     me.bubble.style.transform = `translate(${x}px,${y}px) translate(-50%,-100%)`;
     me.tag.style.transform = `translate(${fx}px,${fy}px) translate(-50%,0)`;
-    me.tag.innerHTML = ''; me.tag.append(me.name, Object.assign(document.createElement('em'), { textContent: 'Lv' + lvl(xpStore[me.id]) }));
+    me.tag.innerHTML = ''; me.tag.append(
+      me.name,
+      Object.assign(document.createElement('em'), { textContent: 'Lv' + lvl(xpStore[me.id]) })
+    );
     setBubble(me, `${STATE_ICON[me.state]} ${me.msg || STATE_LABEL[me.state]}`, me.state);
     me.bubble.style.setProperty('--s', STATE_COLOR[me.state]);
     const fresh = performance.now() - (me.changedAt || 0) < 10000 || me.state === 'error';
@@ -1148,7 +1533,12 @@ function hourNow() {
 
 // always Thai time, whatever time zone this computer is set to
 function bangkokHour() {
-  const parts = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Bangkok', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).formatToParts(new Date());
+  const parts = new Intl.DateTimeFormat(
+    'en-GB',
+    { timeZone: 'Asia/Bangkok', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }
+  ).formatToParts(
+    new Date()
+  );
   const get = t => +parts.find(p => p.type === t).value;
   return get('hour') + get('minute') / 60;
 }
@@ -1161,7 +1551,10 @@ function darkness(h) {
 }
 
 const C = c => new THREE.Color(c);
-const SKY = { day: C('#f3cfdb'), dusk: C('#ffc6a8'), night: C('#2c2546'), wet: C('#c9c1cf'), wetNight: C('#262338'), flash: C('#f4f0ff') };
+const SKY = {
+  day: C('#f3cfdb'), dusk: C('#ffc6a8'), night: C('#2c2546'), wet: C('#c9c1cf'), wetNight: C('#262338'),
+  flash: C('#f4f0ff')
+};
 
 function applyTime(h, t) {
   const dk = darkness(h);
@@ -1182,9 +1575,18 @@ function applyTime(h, t) {
   bulbMat.emissiveIntensity = dk;
   lampLights.forEach((L, i) => { L.intensity = dk * (1.1 + Math.sin(t / 300 + i) * 0.05); });
   starMat.opacity = Math.max(0, dk - 0.3) * 1.4;
-  clouds.forEach(c => c.userData.mat.color.set(dk > 0.5 ? (wet ? '#6f6a8c' : '#8f88b8') : (wet ? '#e2dde8' : '#ffffff')));
+  clouds.forEach(
+    c => c.userData.mat.color.set(dk > 0.5 ? (wet ? '#6f6a8c' : '#8f88b8') : (wet ? '#e2dde8' : '#ffffff'))
+  );
   const dayIcon = dk > 0.5 ? '🌙' : dk > 0.1 ? '🌇' : '☀️';
-  $('clock').textContent = `${window.weatherIcon ? weatherIcon(dayIcon) : dayIcon} ${String(Math.floor(h)).padStart(2, '0')}:${String(Math.floor(h % 1 * 60)).padStart(2, '0')}${window.weatherTemp ? weatherTemp() : ''}`;
+  $(
+    'clock'
+  ).textContent = `${window.weatherIcon ? weatherIcon(
+    dayIcon
+  ) : dayIcon} ${String(Math.floor(h)).padStart(
+    2,
+    '0'
+  )}:${String(Math.floor(h % 1 * 60)).padStart(2, '0')}${window.weatherTemp ? weatherTemp() : ''}`;
 }
 
 // ---------- HUD ----------
@@ -1194,20 +1596,45 @@ function renderHud() {
   $('nIdle').textContent = list.filter(a => a.state === 'idle').length;
   $('nErr').textContent = list.filter(a => a.state === 'error').length;
   $('xpTotal').textContent = list.reduce((s, a) => s + (xpStore[a.id] || 0), 0).toLocaleString();
-  Object.keys(PLACES).forEach(k => { const c = list.filter(a => a.state === k).length; rowEls[k].textContent = c ? c : ''; });
+  Object.keys(PLACES).forEach(
+    k => { const c = list.filter(a => a.state === k).length; rowEls[k].textContent = c ? c : ''; }
+  );
   const chips = $('chips');
   chips.innerHTML = '';
-  if (!list.length) { chips.append(Object.assign(document.createElement('span'), { className: 'empty', textContent: 'Nobody home yet. Start a Claude Code session and a new friend will move in.' })); return; }
+  if (!list.length) {
+    chips.append(
+      Object.assign(
+        document.createElement('span'),
+        {
+          className: 'empty',
+          textContent: 'Nobody home yet. Start a Claude Code session and a new friend will move in.'
+        }
+      )
+    );
+    return;
+  }
 
   for (const me of list) {
-    const chip = Object.assign(document.createElement('button'), { className: 'chip' + (pickId === me.id ? ' sel' : ''), title: 'Open' });
+    const chip = Object.assign(
+      document.createElement('button'),
+      { className: 'chip' + (pickId === me.id ? ' sel' : ''), title: 'Open' }
+    );
     chip.onclick = () => (window.openAgent || openPicker)(me.id);
-    const face = Object.assign(document.createElement('span'), { className: 'face', textContent: SPECIES[me.species].emoji });
+    const face = Object.assign(
+      document.createElement('span'),
+      { className: 'face', textContent: SPECIES[me.species].emoji }
+    );
     face.style.background = me.color; face.style.setProperty('--s', STATE_COLOR[me.state]);
     const info = document.createElement('div'); info.style.minWidth = '0';
     const b = Object.assign(document.createElement('b'), { textContent: me.name });
     b.append(Object.assign(document.createElement('em'), { textContent: 'Lv ' + lvl(xpStore[me.id]) }));
-    info.append(b, Object.assign(document.createElement('small'), { textContent: STATE_LABEL[me.state] + (me.msg ? ' · ' + me.msg : '') }));
+    info.append(
+      b,
+      Object.assign(
+        document.createElement('small'),
+        { textContent: STATE_LABEL[me.state] + (me.msg ? ' · ' + me.msg : '') }
+      )
+    );
     if (window.timelineBar) info.append(timelineBar(me));
     chip.append(face, info); chips.append(chip);
   }
@@ -1266,7 +1693,14 @@ function toggle(btn, cls) {
 if (innerWidth < 1100 || innerHeight < 760) $('guide').open = false;
 
 toggle($('tNames'), 'hide-names'); toggle($('tBubbles'), 'hide-bubbles'); toggle($('tPlaces'), 'hide-places');
-$('tCam').onclick = () => { camera.position.copy(CAM_HOME); camera.zoom = 1; camera.updateProjectionMatrix(); controls.target.copy(CENTER); };
+$(
+  'tCam'
+).onclick = () => {
+  camera.position.copy(CAM_HOME);
+  camera.zoom = 1;
+  camera.updateProjectionMatrix();
+  controls.target.copy(CENTER);
+};
 
 // ---------- loop ----------
 let last = performance.now();
@@ -1275,7 +1709,13 @@ function frame(t) {
   const dt = Math.min(0.05, (t - last) / 1000); last = t;
   applyTime(hourNow(), t);
   animated.forEach(f => f(t));
-  clouds.forEach(c => { const u = c.userData; u.a += u.sp * 16; c.position.set(Math.cos(u.a) * u.r, u.y + Math.sin(t / 2000 + u.r) * 0.2, Math.sin(u.a) * u.r * 0.8); });
+  clouds.forEach(
+    c => {
+      const u = c.userData;
+      u.a += u.sp * 16;
+      c.position.set(Math.cos(u.a) * u.r, u.y + Math.sin(t / 2000 + u.r) * 0.2, Math.sin(u.a) * u.r * 0.8);
+    }
+  );
   for (const me of agents.values()) stepAgent(me, dt, t);
   controls.update();
   renderer.render(scene, camera);

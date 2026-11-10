@@ -6,7 +6,11 @@
     method: body ? 'POST' : 'GET', cache: 'no-store',
     headers: { 'content-type': 'application/json', 'x-miw-token': TOKEN },
     body: body ? JSON.stringify(body) : undefined,
-  }).then(async r => { const j = await r.json().catch(() => ({})); if (!r.ok) throw new Error(j.error || 'Something went wrong. Try again.'); return j; });
+  }).then(async r => {
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.error || 'Something went wrong. Try again.');
+    return j;
+  });
 
   // small DOM helper: el('div', { className: 'x' }, child, 'text', ...)
   function el(tag, props = {}, ...kids) {
@@ -15,13 +19,20 @@
     return n;
   }
 
-  const ago = ts => { const s = Math.max(0, (Date.now() - ts) / 1000); return s < 60 ? 'just now' : s < 3600 ? `${Math.floor(s / 60)}m ago` : `${Math.floor(s / 3600)}h ago`; };
+  const ago = ts => {
+    const s = Math.max(0, (Date.now() - ts) / 1000);
+    return s < 60 ? 'just now' : s < 3600 ? `${Math.floor(s / 60)}m ago` : `${Math.floor(s / 3600)}h ago`;
+  };
 
   // nicknames live in this browser only
   const NICK_KEY = 'miw-town-names';
   const readNicks = () => { try { return JSON.parse(localStorage.getItem(NICK_KEY) || '{}'); } catch { return {}; } };
   window.nickOf = id => readNicks()[id] || '';
-  const setNick = (id, name) => { const m = readNicks(); if (name) m[id] = name; else delete m[id]; try { localStorage.setItem(NICK_KEY, JSON.stringify(m)); } catch {} };
+  const setNick = (id, name) => {
+    const m = readNicks();
+    if (name) m[id] = name; else delete m[id];
+    try { localStorage.setItem(NICK_KEY, JSON.stringify(m)); } catch {}
+  };
 
   document.head.append(el('style', { textContent: `
     #tools .primary{background:linear-gradient(140deg,#ff9fb5,#ffb38a);color:#fff;box-shadow:0 3px 10px rgba(255,126,166,.35)}
@@ -131,7 +142,13 @@
   // ---------- toolbar: new task button ----------
   const tools = document.getElementById('tools');
   const runBadge = el('span', { className: 'badge', hidden: true });
-  const newBtn = el('button', { id: 'tTask', className: 'primary', title: 'Send a new task' }, '✨', el('span', { className: 'txt' }, 'New task'), runBadge);
+  const newBtn = el(
+    'button',
+    { id: 'tTask', className: 'primary', title: 'Send a new task' },
+    '✨',
+    el('span', { className: 'txt' }, 'New task'),
+    runBadge
+  );
   tools.insertBefore(newBtn, tools.children[1]);
   newBtn.onclick = () => openNewTask();
 
@@ -139,7 +156,11 @@
   document.body.append(drawer);
   let view = null; // { kind: 'agent', id } | { kind: 'task' }
   const close = () => { drawer.hidden = true; view = null; shown = ''; };
-  const toast = t => { const n = el('div', { className: 'toast' }, t); document.body.append(n); setTimeout(() => n.remove(), 2600); };
+  const toast = t => {
+    const n = el('div', { className: 'toast' }, t);
+    document.body.append(n);
+    setTimeout(() => n.remove(), 2600);
+  };
 
   // ---------- jobs ----------
   let jobs = [];
@@ -154,20 +175,32 @@
   setInterval(refreshJobs, 2000); refreshJobs();
 
   function jobCard(j) {
-    const pill = el('span', { className: `pill ${j.status}` }, j.status === 'running' ? '⏳ Working' : j.status === 'done' ? '✅ Done' : '⚠️ Problem');
+    const pill = el(
+      'span',
+      { className: `pill ${j.status}` },
+      j.status === 'running' ? '⏳ Working' : j.status === 'done' ? '✅ Done' : '⚠️ Problem'
+    );
 
     const card = el('div', { className: 'job' },
       el('div', { className: 'jt' }, j.resumeOf ? '💬 ' : '📁 ', j.label || 'Task', pill),
       el('p', { className: 'jp' }, j.prompt),
     );
 
-    if (j.log.length && j.status === 'running') { const l = el('div', { className: 'jl' }, j.log.slice(-8).join('\n')); card.append(l); setTimeout(() => { l.scrollTop = l.scrollHeight; }); }
+    if (j.log.length && j.status === 'running') {
+      const l = el('div', { className: 'jl' }, j.log.slice(-8).join('\n'));
+      card.append(l);
+      setTimeout(() => { l.scrollTop = l.scrollHeight; });
+    }
     if (j.result) card.append(el('div', { className: 'jr' }, j.result));
     card.append(el('small', { className: 'hint', style: 'display:block' }, `${j.cwd} · ${ago(j.startedAt)}`));
 
     if (j.status === 'running') {
       const b = el('button', { className: 'stop' }, '✋ Stop');
-      b.onclick = async () => { b.disabled = true; try { await api(`jobs/${j.id}/stop`, {}); } catch (e) { toast(e.message); } refreshJobs(); };
+      b.onclick = async () => {
+        b.disabled = true;
+        try { await api(`jobs/${j.id}/stop`, {}); } catch (e) { toast(e.message); }
+        refreshJobs();
+      };
       card.append(b);
     }
 
@@ -192,9 +225,15 @@
       closeBtn());
 
     const list = el('datalist', { id: 'miwFolders' }, folders.map(f => el('option', { value: f })));
-    const cwd = el('input', { className: 'field', value: draft.cwd, placeholder: '~/projects/my-app', autocomplete: 'off' });
+    const cwd = el(
+      'input',
+      { className: 'field', value: draft.cwd, placeholder: '~/projects/my-app', autocomplete: 'off' }
+    );
     cwd.setAttribute('list', 'miwFolders');
-    const prompt = el('textarea', { className: 'field', value: draft.prompt, placeholder: 'Fix the typo in README.md' });
+    const prompt = el(
+      'textarea',
+      { className: 'field', value: draft.prompt, placeholder: 'Fix the typo in README.md' }
+    );
     const err = el('p', { className: 'err', hidden: true });
     cwd.oninput = () => { draft.cwd = cwd.value; err.hidden = true; };
     prompt.oninput = () => { draft.prompt = prompt.value; err.hidden = true; };
@@ -205,7 +244,12 @@
       if (!draft.prompt.trim()) { err.textContent = 'Write what you want done first.'; err.hidden = false; return; }
       go.disabled = true; go.textContent = 'Starting…';
 
-      try { await api('task', { cwd: draft.cwd.trim(), prompt: draft.prompt.trim() }); draft.prompt = ''; toast('Task started. Watch for a new friend in town!'); await refreshJobs(); }
+      try {
+        await api('task', { cwd: draft.cwd.trim(), prompt: draft.prompt.trim() });
+        draft.prompt = '';
+        toast('Task started. Watch for a new friend in town!');
+        await refreshJobs();
+      }
       catch (e) { err.textContent = e.message; err.hidden = false; }
 
       go.disabled = false; go.textContent = '✨ Start task'; render();
@@ -215,12 +259,24 @@
       el('label', { className: 'lbl2' }, '📁 Project folder'), cwd, list,
       el('p', { className: 'hint' }, 'Any folder inside your home folder.'),
       el('label', { className: 'lbl2', style: 'margin-top:12px' }, '📝 What should they do?'), prompt,
-      el('div', { className: 'lock' }, '🔒', el('span', {}, 'Can read and edit files in this folder only. Can’t run commands or browse the web.')),
+      el(
+        'div',
+        { className: 'lock' },
+        '🔒',
+        el('span', {}, 'Can read and edit files in this folder only. Can’t run commands or browse the web.')
+      ),
       err, go);
 
     const recent = jobs.filter(j => !j.resumeOf);
     return [head, el('div', { className: 'db' }, form,
-      el('div', {}, el('h3', {}, 'Your tasks'), recent.length ? recent.map(jobCard) : el('p', { className: 'hint' }, 'Tasks you start show up here with their results.')))];
+      el(
+        'div',
+        {},
+        el('h3', {}, 'Your tasks'),
+        recent.length ? recent.map(
+          jobCard
+        ) : el('p', { className: 'hint' }, 'Tasks you start show up here with their results.')
+      ))];
   }
 
   // ---------- agent panel ----------
@@ -231,14 +287,22 @@
     const me = agents.get(view.id);
     if (!me) { close(); return []; }
     const xp = xpStore[me.id] || 0, lv = lvl(xp), next = 20 * lv * lv, prev = 20 * (lv - 1) * (lv - 1);
-    const face = el('div', { className: 'face', title: 'Drag to spin', style: `background:${me.color};--s:${STATE_COLOR[me.state]}` }, SPECIES[me.species].emoji);
+    const face = el(
+      'div',
+      { className: 'face', title: 'Drag to spin', style: `background:${me.color};--s:${STATE_COLOR[me.state]}` },
+      SPECIES[me.species].emoji
+    );
     if (portrait) { portrait.show(me); face.replaceChildren(portrait.el); }
     const title = view.renaming ? renameBox(me) : el('h2', {}, me.name, el('em', {}, 'Lv ' + lv));
 
     const head = el('div', { className: 'dh' }, face,
       el('div', { style: 'flex:1;min-width:0' }, title,
         el('small', {}, `${STATE_ICON[me.state]} ${STATE_LABEL[me.state]}${me.msg ? ' · ' + me.msg : ''}`),
-        el('div', { className: 'xp', title: `${xp} XP` }, el('i', { style: `width:${Math.min(100, (xp - prev) / Math.max(1, next - prev) * 100)}%` }))),
+        el(
+          'div',
+          { className: 'xp', title: `${xp} XP` },
+          el('i', { style: `width:${Math.min(100, (xp - prev) / Math.max(1, next - prev) * 100)}%` })
+        )),
       closeBtn());
 
     const pet = el('button', { className: 'act' }, el('span', {}, '🤚'), 'Pet');
@@ -248,12 +312,20 @@
     const ren = el('button', { className: 'act' }, el('span', {}, '✏️'), 'Rename');
     ren.onclick = () => { view.renaming = true; render(); };
     const watching = followId === me.id;
-    const fol = el('button', { className: 'act' + (watching ? ' on' : ''), title: 'Keep the camera on this friend' }, el('span', {}, '🎯'), watching ? 'Following' : 'Follow');
+    const fol = el(
+      'button',
+      { className: 'act' + (watching ? ' on' : ''), title: 'Keep the camera on this friend' },
+      el('span', {}, '🎯'),
+      watching ? 'Following' : 'Follow'
+    );
     fol.onclick = () => { watching ? unfollow() : followAgent(me.id); render(); };
 
     // message box
     const canTalk = me.sessionId && me.cwd;
-    const msg = el('textarea', { className: 'field', value: msgDraft[me.id] || '', placeholder: 'Also add a test for the new button' });
+    const msg = el(
+      'textarea',
+      { className: 'field', value: msgDraft[me.id] || '', placeholder: 'Also add a test for the new button' }
+    );
     const err = el('p', { className: 'err', hidden: true });
     msg.oninput = () => { msgDraft[me.id] = msg.value; err.hidden = true; };
     const go = el('button', { className: 'go' }, '💬 Send message');
@@ -262,7 +334,12 @@
       if (!msg.value.trim()) { err.textContent = 'Write a message first.'; err.hidden = false; return; }
       go.disabled = true; go.textContent = 'Sending…';
 
-      try { await api('task', { agentId: me.id, prompt: msg.value.trim() }); msgDraft[me.id] = ''; toast(`Sent! A copy of ${me.name} picks it up.`); await refreshJobs(); }
+      try {
+        await api('task', { agentId: me.id, prompt: msg.value.trim() });
+        msgDraft[me.id] = '';
+        toast(`Sent! A copy of ${me.name} picks it up.`);
+        await refreshJobs();
+      }
       catch (e) { err.textContent = e.message; err.hidden = false; }
 
       go.disabled = false; go.textContent = '💬 Send message'; render();
@@ -270,18 +347,41 @@
 
     const talk = el('div', { className: 'card' },
       el('label', { className: 'lbl2' }, `💬 Message ${me.name}`),
-      canTalk ? [msg, el('div', { className: 'lock' }, '🔒', el('span', {}, `A copy of this conversation picks up your message and can read and edit files in ${me.cwd.replace(/^\/Users\/[^/]+/, '~')}. Your open Claude Code window isn’t changed.`)), err, go]
+      canTalk ? [
+        msg,
+        el(
+          'div',
+          { className: 'lock' },
+          '🔒',
+          el(
+            'span',
+            {},
+            `A copy of this conversation picks up your message and can read and edit files in ${me.cwd.replace(
+              /^\/Users\/[^/]+/,
+              '~'
+            )}. Your open Claude Code window isn’t changed.`
+          )
+        ),
+        err,
+        go
+      ]
         : el('p', { className: 'hint' }, 'This friend can take messages after its next step in Claude Code.'));
 
     const hist = (me.history || []).slice().reverse();
-    const mine = jobs.filter(j => (j.sessionId && j.sessionId.startsWith(me.id)) || (me.sessionId && j.resumeOf === me.sessionId));
+    const mine = jobs.filter(
+      j => (j.sessionId && j.sessionId.startsWith(me.id)) || (me.sessionId && j.resumeOf === me.sessionId)
+    );
     const worn = wearOf(me);
 
     const wardrobe = el('div', { className: 'card' },
       el('label', { className: 'lbl2' }, '👗 Wardrobe'),
       el('div', { className: 'wear' }, [{ key: 'none', icon: '🙅', name: 'Nothing', lv: 1 }, ...WEAR].map(w => {
         const open = w.lv <= lv;
-        const b = el('button', { className: 'wi' + (worn === w.key ? ' on' : ''), disabled: !open, title: open ? w.name : `Unlocks at Lv ${w.lv}` },
+        const b = el('button', {
+          className: 'wi' + (worn === w.key ? ' on' : ''),
+          disabled: !open,
+          title: open ? w.name : `Unlocks at Lv ${w.lv}`
+        },
           el('span', {}, open ? w.icon : '🔒'), open ? w.name : `Lv ${w.lv}`);
         b.onclick = () => { setWear(me.id, w.key); dressUp(me); render(); };
         return b;
@@ -295,14 +395,35 @@
       talk,
       mine.length ? el('div', {}, el('h3', {}, 'Tasks from Miw’s Town'), mine.map(jobCard)) : null,
       el('div', {}, el('h3', {}, 'Recent activity'), hist.length
-        ? el('div', { className: 'hist' }, hist.map(h => el('div', { className: 'hrow' }, el('span', {}, STATE_ICON[h.state] || '•'), el('span', { title: h.msg }, h.msg || STATE_LABEL[h.state] || h.state), el('small', {}, ago(h.ts)))))
+        ? el(
+          'div',
+          { className: 'hist' },
+          hist.map(
+            h => el(
+              'div',
+              { className: 'hrow' },
+              el('span', {}, STATE_ICON[h.state] || '•'),
+              el('span', { title: h.msg }, h.msg || STATE_LABEL[h.state] || h.state),
+              el('small', {}, ago(h.ts))
+            )
+          )
+        )
         : el('p', { className: 'hint' }, 'Nothing yet.')))];
   }
 
   function renameBox(me) {
     const inp = el('input', { className: 'field', value: me.name, maxLength: 24 });
-    const save = () => { setNick(me.id, inp.value.trim()); me.name = inp.value.trim() || me.realName || me.id; view.renaming = false; renderHud(); render(); };
-    inp.onkeydown = e => { if (e.key === 'Enter') save(); if (e.key === 'Escape') { view.renaming = false; render(); } };
+    const save = () => {
+      setNick(me.id, inp.value.trim());
+      me.name = inp.value.trim() || me.realName || me.id;
+      view.renaming = false;
+      renderHud();
+      render();
+    };
+    inp.onkeydown = e => {
+      if (e.key === 'Enter') save();
+      if (e.key === 'Escape') { view.renaming = false; render(); }
+    };
     setTimeout(() => { inp.focus(); inp.select(); });
     return el('div', { className: 'rename' }, inp, Object.assign(el('button', {}, 'Save'), { onclick: save }));
   }
@@ -319,7 +440,10 @@
 
     for (let i = 0; i < n; i++) {
       const h = el('div', { className: 'heart' }, icons[i % icons.length]);
-      h.style.left = x + 'px'; h.style.top = y + 'px'; h.style.setProperty('--dx', `${(Math.random() - 0.5) * 80}px`); h.style.animationDelay = `${i * 80}ms`;
+      h.style.left = x + 'px'; h.style.top = y + 'px'; h.style.setProperty(
+        '--dx',
+        `${(Math.random() - 0.5) * 80}px`
+      ); h.style.animationDelay = `${i * 80}ms`;
       document.getElementById('labels').append(h); setTimeout(() => h.remove(), 1500 + i * 80);
     }
   }
@@ -329,11 +453,16 @@
   // what the drawer shows; it only rebuilds when this changes
   function signature() {
     if (view.kind === 'task') return JSON.stringify(['task', jobs, folders]);
-    if (view.kind === 'place') return JSON.stringify([view, whoIsAt(places[view.i]).map(a => [a.id, a.name, a.state, a.msg, a.walking, a.species, xpStore[a.id]])]);
+    if (view.kind === 'place') return JSON.stringify(
+      [view, whoIsAt(places[view.i]).map(a => [a.id, a.name, a.state, a.msg, a.walking, a.species, xpStore[a.id]])]
+    );
     const me = agents.get(view.id);
     if (!me) return 'gone';
-    return JSON.stringify([view, me.name, me.state, me.msg, me.species, me.history?.length, xpStore[me.id], me.sessionId, wearOf(me), Math.floor(Date.now() / 60000), followId === me.id,
-      jobs.filter(j => (j.sessionId && j.sessionId.startsWith(me.id)) || (me.sessionId && j.resumeOf === me.sessionId))]);
+    return JSON.stringify([view, me.name, me.state, me.msg, me.species, me.history?.length, xpStore[me.id],
+      me.sessionId, wearOf(me), Math.floor(Date.now() / 60000), followId === me.id,
+      jobs.filter(
+        j => (j.sessionId && j.sessionId.startsWith(me.id)) || (me.sessionId && j.resumeOf === me.sessionId)
+      )]);
   }
 
   let shown = '';
@@ -346,7 +475,9 @@
     const sig = signature();
     if (sig === shown && drawer.childElementCount) return;
     shown = sig;
-    drawer.replaceChildren(...(view.kind === 'task' ? renderTask() : view.kind === 'place' ? renderPlace() : renderAgent()));
+    drawer.replaceChildren(
+      ...(view.kind === 'task' ? renderTask() : view.kind === 'place' ? renderPlace() : renderAgent())
+    );
   }
 
   setInterval(() => { if (view && view.kind !== 'task') render(); }, 1500);
@@ -356,7 +487,11 @@
   const WEAR = window.WEAR, makeWear = window.makeWear;   // shared/wear.js
   const WEAR_KEY = 'miw-town-wear';
   const readWear = () => { try { return JSON.parse(localStorage.getItem(WEAR_KEY) || '{}'); } catch { return {}; } };
-  const setWear = (id, key) => { const m = readWear(); m[id] = key; try { localStorage.setItem(WEAR_KEY, JSON.stringify(m)); } catch {} };
+  const setWear = (id, key) => {
+    const m = readWear();
+    m[id] = key;
+    try { localStorage.setItem(WEAR_KEY, JSON.stringify(m)); } catch {}
+  };
 
   // an agent wears what you picked while it's unlocked, otherwise the newest thing it has unlocked
   function wearOf(me) {
@@ -384,7 +519,11 @@
       if (me.seenLv && lv > me.seenLv) {
         const item = WEAR.find(w => w.lv > me.seenLv && w.lv <= lv);
         burst(me, ['🎉', '✨', '⭐', '🎊']);
-        toast(item ? `🎉 ${me.name} reached Lv ${lv} and unlocked a ${item.name.toLowerCase()} ${item.icon}` : `🎉 ${me.name} reached Lv ${lv}!`);
+        toast(
+          item
+            ? `🎉 ${me.name} reached Lv ${lv} and unlocked a ${item.name.toLowerCase()} ${item.icon}`
+            : `🎉 ${me.name} reached Lv ${lv}!`
+        );
         if (item) setWear(me.id, item.key);
       }
 
@@ -420,7 +559,10 @@
   async function refreshWeather() {
     const q = new URLSearchParams(location.search).get('weather');
     if (q in WET) { window.weather.kind = q; return; }
-    try { const r = await fetch('weather', { cache: 'no-store' }); if (r.ok) Object.assign(window.weather, await r.json()); } catch {}
+    try {
+      const r = await fetch('weather', { cache: 'no-store' });
+      if (r.ok) Object.assign(window.weather, await r.json());
+    } catch {}
   }
 
   refreshWeather(); setInterval(refreshWeather, 10 * 60 * 1000);
@@ -436,8 +578,14 @@
     const sun = new THREE.DirectionalLight(0xffffff, 0.5); sun.position.set(2, 4, 5); sc.add(sun);
     const cam = new THREE.PerspectiveCamera(26, 1, 0.1, 50); cam.position.set(0, 1.0, 4.4); cam.lookAt(0, 0.74, 0);
     let model = null, key = '', spin = 0.5, drag = null;
-    r.domElement.addEventListener('pointerdown', e => { drag = e.clientX; r.domElement.setPointerCapture(e.pointerId); });
-    r.domElement.addEventListener('pointermove', e => { if (drag != null) { spin += (e.clientX - drag) * 0.035; drag = e.clientX; } });
+    r.domElement.addEventListener(
+      'pointerdown',
+      e => { drag = e.clientX; r.domElement.setPointerCapture(e.pointerId); }
+    );
+    r.domElement.addEventListener(
+      'pointermove',
+      e => { if (drag != null) { spin += (e.clientX - drag) * 0.035; drag = e.clientX; } }
+    );
     r.domElement.addEventListener('pointerup', () => { drag = null; });
 
     function show(me) {
@@ -474,13 +622,20 @@
   const hhmm = ts => bkk({ hour: '2-digit', minute: '2-digit' }).format(ts);
 
   function dayStart() {
-    const p = bkk({ hour: '2-digit', minute: '2-digit', second: '2-digit' }).formatToParts(new Date()), g = t => +p.find(x => x.type === t).value;
+    const p = bkk({ hour: '2-digit', minute: '2-digit', second: '2-digit' }).formatToParts(
+      new Date()
+    ), g = t => +p.find(x => x.type === t).value;
     return Date.now() - ((g('hour') * 60 + g('minute')) * 60 + g('second')) * 1000;
   }
 
   function segments(me) {
     const now = Date.now(), from = dayStart(), h = (me.history || []).filter(e => e.ts < now), out = [];
-    h.forEach((e, i) => { const a = Math.max(e.ts, from), b = i + 1 < h.length ? h[i + 1].ts : now; if (b > a) out.push({ state: e.state, a, b }); });
+    h.forEach(
+      (e, i) => {
+        const a = Math.max(e.ts, from), b = i + 1 < h.length ? h[i + 1].ts : now;
+        if (b > a) out.push({ state: e.state, a, b });
+      }
+    );
     return out;
   }
 
@@ -494,7 +649,10 @@
 
     seg.forEach(sg => bar.append(el('i', {
       title: `${STATE_LABEL[sg.state]} · ${hhmm(sg.a)}–${hhmm(sg.b)}`,
-      style: `left:${(sg.a - s0) / span * 100}%;width:${Math.max(0.6, (sg.b - sg.a) / span * 100)}%;background:${STATE_COLOR[sg.state]}`,
+      style: `left:${(sg.a - s0) / span * 100}%;width:${Math.max(
+        0.6,
+        (sg.b - sg.a) / span * 100
+      )}%;background:${STATE_COLOR[sg.state]}`,
     })));
 
     return bar;
@@ -505,7 +663,9 @@
     if (!seg.length) return null;
     const total = {};
     seg.forEach(sg => { total[sg.state] = (total[sg.state] || 0) + sg.b - sg.a; });
-    const dur = ms => ms < 60000 ? '<1m' : ms < 3600000 ? `${Math.round(ms / 60000)}m` : `${Math.floor(ms / 3600000)}h ${Math.round(ms % 3600000 / 60000)}m`;
+    const dur = ms => ms < 60000 ? '<1m' : ms < 3600000 ? `${Math.round(
+      ms / 60000
+    )}m` : `${Math.floor(ms / 3600000)}h ${Math.round(ms % 3600000 / 60000)}m`;
 
     return el('div', { className: 'card' },
       el('label', { className: 'lbl2' }, '🕒 Today'),
@@ -520,10 +680,22 @@
     const key = Object.keys(PLACES).find(k => PLACES[k] === P);
     // a place with an href (the town's Cat Home) is a door: tapping it goes there
     label.addEventListener('click', () => P.href ? (location.href = P.href) : openPlace(i));
-    return { i, key, icon: P.icon, name: P.name, desc: P.desc, rest: key ? (key === 'idle' ? 0 : null) : P.rest, group: P.group, href: P.href, tint: key ? TINT[key] : '#fff0f5' };
+    return {
+      i,
+      key,
+      icon: P.icon,
+      name: P.name,
+      desc: P.desc,
+      rest: key ? (key === 'idle' ? 0 : null) : P.rest,
+      group: P.group,
+      href: P.href,
+      tint: key ? TINT[key] : '#fff0f5'
+    };
   });
 
-  const whoIsAt = pl => [...agents.values()].filter(a => pl.rest == null ? a.state === pl.key : a.state === 'idle' && (a.rest || 0) === pl.rest);
+  const whoIsAt = pl => [...agents.values()].filter(
+    a => pl.rest == null ? a.state === pl.key : a.state === 'idle' && (a.rest || 0) === pl.rest
+  );
   function openPlace(i) { view = { kind: 'place', i }; drawer.hidden = false; render(); }
 
   function renderPlace() {
@@ -547,12 +719,22 @@
       }))
       : el('p', { className: 'hint' }, 'Nobody here right now.');
 
-    return [head, el('div', { className: 'db' }, el('div', {}, el('h3', {}, here.length ? `Here now · ${here.length}` : 'Here now'), list))];
+    return [
+      head,
+      el(
+        'div',
+        { className: 'db' },
+        el('div', {}, el('h3', {}, here.length ? `Here now · ${here.length}` : 'Here now'), list)
+      )
+    ];
   }
 
   // ---------- once everything is built, merge what never moves (agents stay separate) ----------
   // (after the Blender models have swapped in, so they get merged too)
-  const mergeNow = () => window.mergeStatic && mergeStatic(scene, { skip: o => [...agents.values()].some(a => a.cat.g === o), owners: new Set(places.map(p => p.group)) });
+  const mergeNow = () => window.mergeStatic && mergeStatic(
+    scene,
+    { skip: o => [...agents.values()].some(a => a.cat.g === o), owners: new Set(places.map(p => p.group)) }
+  );
   window.whenModelsLoaded ? whenModelsLoaded(mergeNow) : mergeNow();
 
   // ---------- ambient sound, off until you turn it on: birds by day, crickets at night, rain and thunder when it's really wet ----------
@@ -560,7 +742,10 @@
   let soundOn = false;
   try { soundOn = localStorage.getItem(SOUND_KEY) === 'on'; } catch {}
   const sndBtn = el('button', { id: 'tSound', title: 'Ambient sound' });
-  const paintSnd = () => { sndBtn.replaceChildren(soundOn ? '🔊' : '🔇', el('span', { className: 'txt' }, 'Sound')); sndBtn.setAttribute('aria-pressed', String(soundOn)); };
+  const paintSnd = () => {
+    sndBtn.replaceChildren(soundOn ? '🔊' : '🔇', el('span', { className: 'txt' }, 'Sound'));
+    sndBtn.setAttribute('aria-pressed', String(soundOn));
+  };
   paintSnd();
   tools.insertBefore(sndBtn, document.getElementById('tCam'));
   let ac = null, master, rainGain, noiseBuf;
@@ -582,17 +767,32 @@
   const blip = (t0, f0, f1, len, peak) => {
     const o = ac.createOscillator(), g = ac.createGain();
     o.frequency.setValueAtTime(f0, t0); o.frequency.exponentialRampToValueAtTime(f1, t0 + len * 0.8);
-    g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(peak, t0 + len * 0.15); g.gain.exponentialRampToValueAtTime(0.0001, t0 + len);
+    g.gain.setValueAtTime(
+      0.0001,
+      t0
+    ); g.gain.exponentialRampToValueAtTime(
+      peak,
+      t0 + len * 0.15
+    ); g.gain.exponentialRampToValueAtTime(0.0001, t0 + len);
     o.connect(g).connect(master); o.start(t0); o.stop(t0 + len + 0.02);
   };
 
-  const chirp = at => { const n = 2 + Math.floor(Math.random() * 3), f = 2600 + Math.random() * 1400; for (let i = 0; i < n; i++) blip(at + i * 0.13, f, f * 1.45, 0.1, 0.045); };
-  const cricket = at => { const f = 4300 + Math.random() * 300; for (let i = 0; i < 3; i++) blip(at + i * 0.07, f, f, 0.045, 0.016); };
+  const chirp = at => {
+    const n = 2 + Math.floor(Math.random() * 3), f = 2600 + Math.random() * 1400;
+    for (let i = 0; i < n; i++) blip(at + i * 0.13, f, f * 1.45, 0.1, 0.045);
+  };
+  const cricket = at => {
+    const f = 4300 + Math.random() * 300;
+    for (let i = 0; i < 3; i++) blip(at + i * 0.07, f, f, 0.045, 0.016);
+  };
 
   function thunder(at) {
     const src = ac.createBufferSource(), lp = ac.createBiquadFilter(), g = ac.createGain();
     src.buffer = noiseBuf; lp.type = 'lowpass'; lp.frequency.value = 160;
-    g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(0.9, at + 0.15); g.gain.exponentialRampToValueAtTime(0.0001, at + 3);
+    g.gain.setValueAtTime(
+      0.0001,
+      at
+    ); g.gain.exponentialRampToValueAtTime(0.9, at + 0.15); g.gain.exponentialRampToValueAtTime(0.0001, at + 3);
     src.connect(lp).connect(g).connect(master); src.start(at); src.stop(at + 3.1);
   }
 
@@ -600,13 +800,21 @@
 
   setInterval(() => {
     if (!ac || !soundOn) return;
-    const now = ac.currentTime, dk = darkness(hourNow()), kind = window.weather.kind, wet = kind === 'rain' || kind === 'storm';
+    const now = ac.currentTime, dk = darkness(
+      hourNow()
+    ), kind = window.weather.kind, wet = kind === 'rain' || kind === 'storm';
     rainGain.gain.setTargetAtTime(wet ? (kind === 'storm' ? 0.35 : 0.22) : 0, now, 1.5);
     if (!wet && dk < 0.4 && now > nextBird) { chirp(now + 0.05); nextBird = now + 2 + Math.random() * 5; }
-    if (dk > 0.6 && kind !== 'storm' && now > nextCricket) { cricket(now + 0.05); nextCricket = now + 0.6 + Math.random() * 0.9; }
+    if (dk > 0.6 && kind !== 'storm' && now > nextCricket) {
+      cricket(now + 0.05);
+      nextCricket = now + 0.6 + Math.random() * 0.9;
+    }
     // thunder rolls in just after each lightning flash the scene draws
     const cycle = Math.floor(performance.now() / 9000);
-    if (kind === 'storm' && cycle !== lastFlash && performance.now() % 9000 > 140) { lastFlash = cycle; thunder(now + 0.6); }
+    if (kind === 'storm' && cycle !== lastFlash && performance.now() % 9000 > 140) {
+      lastFlash = cycle;
+      thunder(now + 0.6);
+    }
   }, 200);
 
   sndBtn.onclick = () => {
@@ -625,15 +833,23 @@
   const BASE_TITLE = document.title;
   const BELL_KEY = 'miw-town-bell';
   let bellOn = false;
-  try { bellOn = localStorage.getItem(BELL_KEY) === 'on' && window.Notification && Notification.permission === 'granted'; } catch {}
+  try {
+    bellOn = localStorage.getItem(BELL_KEY) === 'on' && window.Notification && Notification.permission === 'granted';
+  } catch {}
   const bellBtn = el('button', { id: 'tBell', title: 'Desktop notifications when a friend needs you' });
-  const paintBell = () => { bellBtn.replaceChildren(bellOn ? '🔔' : '🔕', el('span', { className: 'txt' }, 'Alerts')); bellBtn.setAttribute('aria-pressed', String(bellOn)); };
+  const paintBell = () => {
+    bellBtn.replaceChildren(bellOn ? '🔔' : '🔕', el('span', { className: 'txt' }, 'Alerts'));
+    bellBtn.setAttribute('aria-pressed', String(bellOn));
+  };
   paintBell();
   tools.insertBefore(bellBtn, sndBtn);
 
   bellBtn.onclick = async () => {
     if (!bellOn && window.Notification && Notification.permission !== 'granted') {
-      if (await Notification.requestPermission() !== 'granted') { toast('Notifications are blocked in this browser.'); return; }
+      if (await Notification.requestPermission() !== 'granted') {
+        toast('Notifications are blocked in this browser.');
+        return;
+      }
     }
 
     bellOn = !bellOn && !!window.Notification;
@@ -660,7 +876,10 @@
     ding(kind === 'done' ? [880, 1320] : kind === 'stuck' ? [520, 390] : [660, 880, 660]);
 
     if (bellOn && document.hidden) {
-      try { const n = new Notification(BASE_TITLE, { body: text, tag: me.id }); n.onclick = () => { focus(); openAgent(me.id); n.close(); }; } catch {}
+      try {
+        const n = new Notification(BASE_TITLE, { body: text, tag: me.id });
+        n.onclick = () => { focus(); openAgent(me.id); n.close(); };
+      } catch {}
     }
   }
 
@@ -678,7 +897,13 @@
       seen.set(me.id, { busy, need, state: me.state });
       if (!before) continue; // first sighting: don't shout about the past
 
-      if (need && !before.need) heyYou(me, me.state === 'error' ? 'stuck' : 'wait', me.state === 'error' ? `🐞 ${me.name} is stuck${me.msg ? ': ' + me.msg : ''}` : `🙋 ${me.name} is waiting for you`);
+      if (need && !before.need) heyYou(
+        me,
+        me.state === 'error' ? 'stuck' : 'wait',
+        me.state === 'error'
+          ? `🐞 ${me.name} is stuck${me.msg ? ': ' + me.msg : ''}`
+          : `🙋 ${me.name} is waiting for you`
+      );
       else if (!need && before.busy && me.state === 'idle') heyYou(me, 'done', `✅ ${me.name} finished`);
     }
 
@@ -699,7 +924,12 @@
     pill.replaceChildren(`🎯 Following ${me.name}`, stop); pill.hidden = false;
   };
 
-  function unfollow() { followId = null; zoomTo = null; pill.hidden = true; if (view && view.kind === 'agent') render(); }
+  function unfollow() {
+    followId = null;
+    zoomTo = null;
+    pill.hidden = true;
+    if (view && view.kind === 'agent') render();
+  }
   const shift = new THREE.Vector3();
 
   animated.push(() => {
@@ -717,7 +947,19 @@
   });
 
   // turning the view or resetting it lets go; zooming in and out keeps following
-  renderer.domElement.addEventListener('pointerdown', e => { if (e.button === 0 && followId) { const s = [e.clientX, e.clientY]; const up = ev => { if (Math.hypot(ev.clientX - s[0], ev.clientY - s[1]) > 5) unfollow(); removeEventListener('pointerup', up); }; addEventListener('pointerup', up); } });
+  renderer.domElement.addEventListener(
+    'pointerdown',
+    e => {
+      if (e.button === 0 && followId) {
+        const s = [e.clientX, e.clientY];
+        const up = ev => {
+          if (Math.hypot(ev.clientX - s[0], ev.clientY - s[1]) > 5) unfollow();
+          removeEventListener('pointerup', up);
+        };
+        addEventListener('pointerup', up);
+      }
+    }
+  );
   renderer.domElement.addEventListener('wheel', () => { zoomTo = null; }, { passive: true });
   document.getElementById('tCam').addEventListener('click', unfollow);
 
@@ -741,18 +983,27 @@
         const p = me.cat.g.position, [x, y] = toScreen(new THREE.Vector3(p.x, p.y - 0.25, p.z));
         const w = g.measureText(me.name).width + 16 * k, h = 20 * k, X = pad + x * k, Y = pad + y * k + 14 * k;
         if (X < pad || X > pad + W || Y < pad || Y > pad + H) continue;
-        g.fillStyle = 'rgba(75,52,66,.82)'; g.beginPath(); g.roundRect ? g.roundRect(X - w / 2, Y - h / 2, w, h, h / 2) : g.rect(X - w / 2, Y - h / 2, w, h); g.fill();
+        g.fillStyle = 'rgba(75,52,66,.82)'; g.beginPath(); g.roundRect ? g.roundRect(
+          X - w / 2, Y - h / 2, w, h, h / 2
+        ) : g.rect(X - w / 2, Y - h / 2, w, h); g.fill();
         g.fillStyle = '#fff'; g.fillText(me.name, X, Y + k);
       }
     }
 
-    const now = new Date(), when = now.toLocaleString('en-GB', { timeZone: 'Asia/Bangkok', day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+    const now = new Date(), when = now.toLocaleString(
+      'en-GB',
+      { timeZone: 'Asia/Bangkok', day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }
+    );
     const list = [...agents.values()], working = list.filter(a => a.state !== 'idle' && a.state !== 'error').length;
     g.textBaseline = 'middle'; g.textAlign = 'left'; g.fillStyle = '#4b3442';
     g.font = `600 ${Math.round(foot * 0.34)}px Fredoka, sans-serif`;
     g.fillText(`🥨 ${BASE_TITLE}`, pad, pad + H + foot / 2);
     g.textAlign = 'right'; g.fillStyle = '#9b8592'; g.font = `600 ${Math.round(foot * 0.22)}px Nunito, sans-serif`;
-    g.fillText(`${list.length} friend${list.length === 1 ? '' : 's'} · ${working} working · ${when}`, pad + W, pad + H + foot / 2);
+    g.fillText(
+      `${list.length} friend${list.length === 1 ? '' : 's'} · ${working} working · ${when}`,
+      pad + W,
+      pad + H + foot / 2
+    );
     document.body.append(Object.assign(el('div', { className: 'flash' }), { onanimationend() { this.remove(); } }));
     ding([1200, 1600]);
 
@@ -770,7 +1021,11 @@
     me.bubbleText = text; me.bubbleKind = kind;
     me.bubble.dataset.st = kind;
     const i = text.indexOf(' ');
-    me.bubble.replaceChildren(el('span', { className: 'ic' }, i > 0 ? text.slice(0, i) : ''), i > 0 ? text.slice(i) : text, el('span', { className: 'fx' }));
+    me.bubble.replaceChildren(
+      el('span', { className: 'ic' }, i > 0 ? text.slice(0, i) : ''),
+      i > 0 ? text.slice(i) : text,
+      el('span', { className: 'fx' })
+    );
   };
 
   // ---------- click an agent in the 3D scene ----------
@@ -788,12 +1043,16 @@
     if (!hit) {
       const tapped = ray.intersectObjects(places.filter(p => p.group).map(p => p.group), true)[0];
       if (!tapped) return;
-      const pl = places.find(p => { let o = tapped.object; while (o) { if (o === p.group) return true; o = o.parent; } return false; });
+      const pl = places.find(
+        p => { let o = tapped.object; while (o) { if (o === p.group) return true; o = o.parent; } return false; }
+      );
       if (pl) pl.href ? (location.href = pl.href) : openPlace(pl.i);
       return;
     }
 
-    const me = list.find(a => { let o = hit.object; while (o) { if (o === a.cat.g) return true; o = o.parent; } return false; });
+    const me = list.find(
+      a => { let o = hit.object; while (o) { if (o === a.cat.g) return true; o = o.parent; } return false; }
+    );
     if (me) openAgent(me.id);
   });
 
