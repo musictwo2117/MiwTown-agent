@@ -1,4 +1,4 @@
-// Tiny state server for Miw's Town. No dependencies: `node agent/server.js`
+// Tiny state server for Miw's Town. No dependencies: `node server.js`
 const http = require('http');
 const fs = require('fs');
 const os = require('os');
@@ -7,7 +7,7 @@ const crypto = require('crypto');
 const { spawn } = require('child_process');
 
 const PORT = Number(process.env.AGENT_OFFICE_PORT || 19100);
-const ROOT = path.join(__dirname, '..');   // the repo: agent/ (this), game/ and shared/
+const ROOT = __dirname;   // the repo: the pages here plus shared/ (characters and models)
 const TYPES = {
   '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8',
   '.glb': 'model/gltf-binary', '.ogg': 'audio/ogg', '.mp3': 'audio/mpeg', '.woff2': 'font/woff2'
@@ -180,7 +180,7 @@ http.createServer((req, res) => {
   // refuse requests addressed to any other host name (blocks DNS-rebinding tricks)
   if (!ALLOWED_HOSTS.has(req.headers.host)) { res.statusCode = 403; return res.end(); }
   let url = req.url.split('?')[0];
-  // pages in agent/ call these by relative address
+  // the pages call these by relative address
   if (/^\/agent\/(state|weather|jobs|task|folders)(\/|$)/.test(url)) url = url.slice('/agent'.length);
 
   if (url === '/state' && req.method === 'GET') {
@@ -276,23 +276,21 @@ http.createServer((req, res) => {
     return send(res, 200, [...seen].filter(p => typeof checkFolder(p) !== 'string'));
   }
 
-  // the old addresses still work and lead to the pages' new homes
-  const GO = {
-    '/': '/agent/town.html', '/town': '/agent/town.html', '/room': '/agent/room.html', '/game': '/game/game.html'
-  };
+  // short addresses lead to the pages
+  const GO = { '/': '/town.html', '/town': '/town.html', '/room': '/room.html' };
   if (GO[url] && req.method === 'GET') {
     res.statusCode = 302;
     res.setHeader('location', GO[url] + (req.url.includes('?') ? '?' + req.url.split('?').slice(1).join('?') : ''));
     return res.end();
   }   // keep ?fps and the like
 
-  // pages, scripts, styles and models from agent/, game/ and shared/ (never the server itself or the hook)
-  if (req.method === 'GET' && /^\/(agent|game|shared)\//.test(url)) {
+  // pages, scripts, styles and models: the top-level pages and shared/ (never the server itself or the hook)
+  if (req.method === 'GET' && /^\/(shared\/|[\w.-]+$)/.test(url.split('?')[0])) {
     let file; try {
       file = path.resolve(ROOT, decodeURIComponent(url).slice(1));
     } catch { res.statusCode = 400; return res.end(); }
     const ext = path.extname(file), type = TYPES[ext];
-    const inside = ['agent', 'game', 'shared'].some(d => file.startsWith(path.join(ROOT, d) + path.sep));
+    const inside = file.startsWith(path.join(ROOT, 'shared') + path.sep) || path.dirname(file) === ROOT;
 
     if (type && inside && !['server.js', 'hook.js'].includes(path.basename(file)) && fs.existsSync(file)) {
       res.setHeader('content-type', type);

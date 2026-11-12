@@ -1,0 +1,25 @@
+#!/bin/sh
+# Rebuild every .glb from its Blender script:  sh shared/models/build.sh [cat cottage ...]
+# Characters each have their own script; the town's buildings come from town.py, the Cat Room's furniture from
+# room.py, the small props used all over (trees, flowers, lamp posts) from props.py, the video's cheesecake
+# shop from shop.py, the desserts on Cheesecake Rush's menu from menu.py, and its little icons from icons.py.
+cd "$(dirname "$0")"
+BLENDER=${BLENDER:-/Applications/Blender.app/Contents/MacOS/Blender}
+CHARACTERS="cat bunny bear frog chick penguin miw"
+BUILDINGS="cottage tower studio library factory postoffice clinic cafe cathome"
+PROPS="tree treetall flower lamppost"
+SHOP="shop sign bigcake shoplamp"
+MENU="cheesecake pretzelcake kittycupcake donut pancake macaron honeytoast matcharoll pudding bingsu festivalcake cheesefull pretzelfull"
+ICONS="strawberry egg cheese flour cookie milk butter chocolate pretzel sparkle coin banknote moneybag phone receipt heart star flame angry thought clock bell lock pan spoon bowl ribbon chefhat sprout mallet finger showcase shopbag speaker mute gear bin disk"
+FURNITURE="bookshelf whiteboard routertable serverrack desk sofa floorlamp cornerplant catbed kitchen fridge diningtable bathtub toilet washbasin bed nightstand wardrobe planters balconyplants beanbags"
+for name in ${@:-$CHARACTERS $BUILDINGS $FURNITURE $PROPS $SHOP $MENU $ICONS}; do
+  script=$name.py
+  case " $BUILDINGS " in *" $name "*) script=town.py ;; esac
+  case " $FURNITURE " in *" $name "*) script=room.py ;; esac
+  case " $PROPS " in *" $name "*) script=props.py ;; esac
+  case " $SHOP " in *" $name "*) script=shop.py ;; esac
+  case " $MENU " in *" $name "*) script=menu.py ;; esac
+  case " $ICONS " in *" $name "*) script=icons.py ;; esac
+  "$BLENDER" -b -P "$script" -- "$name.glb" 2>&1 | grep -E "Error|wrote"
+  python3 optimize.py "$name.glb" | head -1
+done
